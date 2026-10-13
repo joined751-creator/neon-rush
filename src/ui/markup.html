@@ -1,0 +1,181 @@
+<div id="app">
+  <div id="divider" hidden></div>
+  <div id="hud" hidden></div>
+  <canvas id="minimap" width="220" height="220" hidden></canvas>
+
+  <!-- TITLE -->
+  <section id="screen-title" class="screen">
+    <div class="title-col">
+      <div class="logo" aria-label="Neon Rush">
+        <span class="logo-a">NEON</span>
+        <span class="logo-b">RUSH</span>
+      </div>
+      <p class="tagline">Аркадные неоновые гонки. Дрифт-турбо, нитро, ракеты и сплит-скрин на двоих за одной клавиатурой.</p>
+      <nav class="menu" id="title-menu">
+        <button class="mbtn" data-action="play"><span class="mbtn-k">01</span>Заезд</button>
+        <button class="mbtn" data-action="quick2"><span class="mbtn-k">02</span>Быстрая дуэль на двоих</button>
+        <button class="mbtn" data-action="controls"><span class="mbtn-k">03</span>Управление</button>
+        <button class="mbtn" data-action="settings"><span class="mbtn-k">04</span>Настройки</button>
+      </nav>
+      <p class="hint">Enter — выбрать · ↑↓ — навигация</p>
+    </div>
+    <div class="title-badge">
+      <div class="badge-row"><b>4</b> трассы</div>
+      <div class="badge-row"><b>4</b> машины</div>
+      <div class="badge-row"><b>4</b> режима</div>
+      <div class="badge-row"><b>2</b> игрока</div>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="screen-setup" class="screen" hidden>
+    <div class="panel setup-panel">
+      <header class="panel-head">
+        <h2>Настройка заезда</h2>
+        <span class="eyebrow" id="setup-summary"></span>
+      </header>
+      <div class="setup-grid">
+        <div class="field field-wide">
+          <label class="flabel">Режим</label>
+          <div class="cards" id="opt-mode"></div>
+        </div>
+        <div class="field field-wide">
+          <label class="flabel">Трасса</label>
+          <div class="cards tracks" id="opt-track"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Игроки</label>
+          <div class="seg" id="opt-players"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Круги</label>
+          <div class="stepper" id="opt-laps"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Соперники ИИ</label>
+          <div class="stepper" id="opt-bots"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Сложность</label>
+          <div class="seg" id="opt-diff"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Бонусы на трассе</label>
+          <div class="seg" id="opt-items"></div>
+        </div>
+        <div class="field">
+          <label class="flabel">Направление</label>
+          <div class="seg" id="opt-mirror"></div>
+        </div>
+      </div>
+      <footer class="panel-foot">
+        <button class="btn ghost" data-action="back">Назад</button>
+        <button class="btn primary" data-action="garage">В гараж →</button>
+      </footer>
+    </div>
+  </section>
+
+  <!-- GARAGE -->
+  <section id="screen-garage" class="screen" hidden>
+    <div class="garage-head">
+      <h2>Гараж</h2>
+      <span class="eyebrow">Выбери машину и цвет</span>
+    </div>
+    <div class="garage-players" id="garage-players"></div>
+    <footer class="garage-foot">
+      <button class="btn ghost" data-action="back">Назад</button>
+      <button class="btn primary big" data-action="start">На старт! <kbd>Enter</kbd></button>
+    </footer>
+  </section>
+
+  <!-- CONTROLS -->
+  <section id="screen-controls" class="screen" hidden>
+    <div class="panel narrow">
+      <header class="panel-head"><h2>Управление</h2></header>
+      <div class="table-wrap">
+        <table class="keys">
+          <thead><tr><th></th><th>Игрок 1</th><th>Игрок 2</th><th>Геймпад</th></tr></thead>
+          <tbody>
+            <tr><td>Газ / тормоз</td><td><kbd>W</kbd> <kbd>S</kbd></td><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>RT / LT</td></tr>
+            <tr><td>Руль</td><td><kbd>A</kbd> <kbd>D</kbd></td><td><kbd>←</kbd> <kbd>→</kbd></td><td>Стик</td></tr>
+            <tr><td>Дрифт</td><td><kbd>Пробел</kbd></td><td><kbd>Правый Shift</kbd></td><td>RB / LB</td></tr>
+            <tr><td>Нитро</td><td><kbd>Левый Shift</kbd></td><td><kbd>Enter</kbd></td><td>X</td></tr>
+            <tr><td>Бонус</td><td><kbd>E</kbd></td><td><kbd>/</kbd> или <kbd>Правый Ctrl</kbd></td><td>B</td></tr>
+            <tr><td>Камера</td><td><kbd>C</kbd></td><td><kbd>.</kbd></td><td>Y</td></tr>
+            <tr><td>Вернуться на трассу</td><td><kbd>R</kbd></td><td><kbd>Backspace</kbd></td><td>Start+…</td></tr>
+            <tr><td>Пауза · Звук</td><td colspan="3"><kbd>Esc</kbd> · <kbd>M</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tips">
+        <div class="tip"><b>Дрифт-турбо.</b> Зажми дрифт в повороте. Искры меняют цвет: синие → оранжевые → фиолетовые. Отпусти — получишь ускорение. Чем дольше дрифт, тем мощнее.</div>
+        <div class="tip"><b>Нитро</b> копится от дрифта, слипстрима (едь прямо за соперником), обгонов «на волосок» и прыжков.</div>
+        <div class="tip"><b>Идеальный старт.</b> Нажми газ ровно в момент «1 → СТАРТ». Слишком рано — двигатель захлебнётся.</div>
+        <div class="tip"><b>Бонусы:</b> ракета (наводится на впереди идущего), масло, щит, ЭМИ-волна, канистра нитро.</div>
+      </div>
+      <footer class="panel-foot"><button class="btn primary" data-action="back">Понятно</button></footer>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="screen-settings" class="screen" hidden>
+    <div class="panel narrow">
+      <header class="panel-head"><h2>Настройки</h2></header>
+      <div class="setup-grid">
+        <div class="field"><label class="flabel">Графика</label><div class="seg" id="opt-quality"></div></div>
+        <div class="field"><label class="flabel">Сплит-скрин</label><div class="seg" id="opt-split"></div></div>
+        <div class="field"><label class="flabel">Звук</label><div class="seg" id="opt-sound"></div></div>
+        <div class="field"><label class="flabel">Рекорды</label><div class="seg" id="opt-reset"></div></div>
+      </div>
+      <footer class="panel-foot"><button class="btn primary" data-action="back">Готово</button></footer>
+    </div>
+  </section>
+
+  <!-- PAUSE -->
+  <section id="screen-pause" class="screen dim" hidden>
+    <div class="panel narrow center-panel">
+      <h2>Пауза</h2>
+      <nav class="menu">
+        <button class="mbtn" data-action="resume">Продолжить</button>
+        <button class="mbtn" data-action="restart">Перезапуск</button>
+        <button class="mbtn" data-action="quit">В главное меню</button>
+      </nav>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="screen-results" class="screen dim" hidden>
+    <div class="panel results-panel">
+      <header class="panel-head">
+        <h2 id="results-title">Финиш</h2>
+        <span class="eyebrow" id="results-sub"></span>
+      </header>
+      <div class="results-body">
+        <div class="table-wrap"><table class="standings" id="results-table"></table></div>
+        <div class="gp-box" id="results-gp" hidden></div>
+      </div>
+      <footer class="panel-foot">
+        <button class="btn ghost" data-action="quit">В меню</button>
+        <span class="foot-right"><button class="btn ghost" id="results-retry" data-action="restart" hidden>Переиграть этап</button>
+        <button class="btn primary" data-action="restart">Ещё заезд</button></span>
+      </footer>
+    </div>
+  </section>
+
+  <div id="touch" hidden>
+    <div class="t-left">
+      <button class="tbtn" data-t="left" aria-label="Влево">◀</button>
+      <button class="tbtn" data-t="right" aria-label="Вправо">▶</button>
+    </div>
+    <div class="t-right">
+      <button class="tbtn sm" data-t="item">БОНУС</button>
+      <button class="tbtn sm" data-t="nitro">НИТРО</button>
+      <button class="tbtn sm" data-t="drift">ДРИФТ</button>
+      <button class="tbtn sm" data-t="brake">ТОРМОЗ</button>
+    </div>
+  </div>
+
+  <button id="mute" class="icon-btn" aria-label="Звук">♪</button>
+  <button id="pause-btn" class="icon-btn" aria-label="Пауза" hidden>II</button>
+  <div id="flash"></div>
+</div>
