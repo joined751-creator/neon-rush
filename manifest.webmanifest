@@ -1,0 +1,17 @@
+{
+  "name": "NEON RUSH — неоновые гонки",
+  "short_name": "Neon Rush",
+  "description": "3D-аркадная неоновая гонка: дрифт-турбо, нитро, ракеты, Гран-при и сплит-скрин.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07040f",
+  "theme_color": "#07040f",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
