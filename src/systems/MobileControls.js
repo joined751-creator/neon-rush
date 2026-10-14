@@ -5,6 +5,7 @@ const STICK_RADIUS = 56; // px of thumb travel for full lock
 const STICK_DEADZONE = 0.06;
 const TILT_MAX = 0.42; // rad of roll for full lock (~24°)
 const TILT_DEADZONE = 0.04;
+const STICK_REVERSE = 0.45; // pull the thumb down by this share of the radius → brake / reverse
 
 export const isTouchDevice = () =>
   (window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -12,7 +13,8 @@ export const isTouchDevice = () =>
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /**
- * Mobile layer: per-player touch pads (floating stick / arrow buttons / tilt steering),
+ * Mobile layer: per-player touch pads (floating joystick / arrow buttons / tilt steering),
+ * joystick = gas while touched, steer left/right, pull down to brake and reverse (like most mobile racers),
  * action cluster, haptics, tilt sensor and item/nitro feedback on the buttons.
  * Writes only into InputSystem.touch[p]; the race reads it like any other device.
  */
@@ -68,8 +70,8 @@ export class MobileControls {
     const n = race.humans.length;
     const s = this.gs.settings;
     for (let p = 0; p < 2; p++) {
-      const auto = s.autoGas !== false;
-      Object.assign(this.input.touch[p], { active: p < n, steer: 0, gas: false, brake: false, drift: false, nitro: false, itemEdge: false, cameraEdge: false, autoGas: auto });
+      const auto = s.autoGas === true; // default: gas only while the joystick (or pedal) is held
+      Object.assign(this.input.touch[p], { active: p < n, steer: 0, gas: false, brake: false, bb: false, sb: false, drift: false, nitro: false, itemEdge: false, cameraEdge: false, autoGas: auto });
     }
     for (let p = 0; p < n; p++) this.pads.push(this.buildPad(p, n));
     this.root.classList.toggle('duo', n > 1);
@@ -81,14 +83,15 @@ export class MobileControls {
     const t = this.input.touch[p];
     const tilt = this.scheme === 'tilt' && n === 1;
     const arrows = this.scheme === 'buttons';
-    const manual = this.gs.settings.autoGas === false;
+    // A separate pedal is only needed when the left thumb is not on the joystick.
+    const manual = this.gs.settings.autoGas !== true && (tilt || arrows);
     const el = document.createElement('div');
     el.className = 'tpad';
     Object.assign(el.style, n > 1 ? { left: p === 0 ? '0' : '50%', width: '50%' } : { left: '0', width: '100%' });
     let left;
     if (tilt) left = `<div class="tzone tilt-zone"><button class="tbtn brake-big" data-k="brake">ТОРМОЗ</button><span class="tz-hint">руль — наклон телефона</span></div>`;
     else if (arrows) left = `<div class="tzone arrows"><button class="tbtn arr" data-k="left" aria-label="Влево">◀</button><button class="tbtn arr" data-k="right" aria-label="Вправо">▶</button></div>`;
-    else left = `<div class="tzone stick-zone"><div class="stick" hidden><i></i></div><span class="tz-hint">⟵ веди пальцем ⟶</span></div>`;
+    else left = `<div class="tzone stick-zone"><div class="stick" hidden><span class="s-up">ГАЗ</span><span class="s-dn">НАЗАД</span><i></i></div><span class="tz-hint">коснись — газ · веди — руль · вниз — назад</span></div>`;
     el.innerHTML = `${left}
       <div class="tcluster${manual ? ' manual' : ''}">
         <button class="tbtn c-drift" data-k="drift">ДРИФТ</button>
@@ -116,6 +119,7 @@ export class MobileControls {
       else if (k === 'right') t.steer = 1;
       else if (k === 'item') t.itemEdge = true;
       else if (k === 'camera') t.cameraEdge = true;
+      else if (k === 'brake') { t.bb = true; t.brake = true; }
       else t[k] = true;
       if (k === 'item' || k === 'nitro') this.buzz(8);
     };
@@ -124,6 +128,7 @@ export class MobileControls {
       b.classList.remove('on');
       if (k === 'left' && t.steer < 0) t.steer = 0;
       else if (k === 'right' && t.steer > 0) t.steer = 0;
+      else if (k === 'brake') { t.bb = false; t.brake = t.sb; }
       else if (!['item', 'camera', 'left', 'right'].includes(k)) t[k] = false;
     };
     b.addEventListener('pointerdown', down);
@@ -131,12 +136,24 @@ export class MobileControls {
     b.addEventListener('pointercancel', up);
   }
 
-  /** Floating analog stick: appears under the thumb, follows it past full lock so reversing is instant. */
+  /**
+   * Floating joystick: appears under the thumb. Touching = gas, left/right = steer,
+   * pulling down = brake then reverse, letting go = coast. Past the rim the base follows the thumb,
+   * so changing direction is instant.
+   */
   bindStick(zone, t) {
     const stick = zone.querySelector('.stick');
     const knob = stick.querySelector('i');
     let id = null, ax = 0, ay = 0;
     const place = () => { stick.style.left = `${ax}px`; stick.style.top = `${ay}px`; };
+    const pedal = (dy) => {
+      if (t.autoGas) return;
+      const back = dy > STICK_REVERSE * STICK_RADIUS;
+      t.gas = !back;
+      t.sb = back;
+      t.brake = t.sb || t.bb;
+      stick.classList.toggle('rev', back);
+    };
     zone.addEventListener('pointerdown', (e) => {
       if (id !== null) return;
       e.preventDefault();
@@ -148,23 +165,33 @@ export class MobileControls {
       stick.hidden = false;
       knob.style.transform = 'translate(-50%, -50%)';
       zone.classList.add('used');
+      pedal(0);
     });
     zone.addEventListener('pointermove', (e) => {
       if (e.pointerId !== id) return;
       const r = zone.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      let dx = x - ax;
-      if (Math.abs(dx) > STICK_RADIUS) { ax = x - Math.sign(dx) * STICK_RADIUS; dx = Math.sign(dx) * STICK_RADIUS; place(); }
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      let dx = x - ax, dy = y - ay;
+      const len = Math.hypot(dx, dy);
+      if (len > STICK_RADIUS) {
+        const k = STICK_RADIUS / len;
+        dx *= k; dy *= k;
+        ax = x - dx; ay = y - dy;
+        place();
+      }
       let v = dx / STICK_RADIUS;
       v = Math.abs(v) < STICK_DEADZONE ? 0 : Math.sign(v) * Math.pow(Math.abs(v), 1.25);
       t.steer = clamp(v, -1, 1);
-      knob.style.transform = `translate(calc(-50% + ${dx}px), -50%)`;
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      pedal(dy);
     });
     const end = (e) => {
       if (e.pointerId !== id) return;
       id = null;
       t.steer = 0;
+      if (!t.autoGas) { t.gas = false; t.sb = false; t.brake = t.bb; }
       stick.hidden = true;
+      stick.classList.remove('rev');
     };
     zone.addEventListener('pointerup', end);
     zone.addEventListener('pointercancel', end);
@@ -197,7 +224,7 @@ export class MobileControls {
 
   /** Release everything (pause, results, quit). */
   reset() {
-    for (const t of this.input.touch) Object.assign(t, { steer: 0, gas: t.autoGas && this.go, brake: false, drift: false, nitro: false, itemEdge: false, cameraEdge: false });
+    for (const t of this.input.touch) Object.assign(t, { steer: 0, gas: t.autoGas && this.go, brake: false, bb: false, sb: false, drift: false, nitro: false, itemEdge: false, cameraEdge: false });
     for (const b of this.root.querySelectorAll('.tbtn.on')) b.classList.remove('on');
     for (const s of this.root.querySelectorAll('.stick')) s.hidden = true;
   }
