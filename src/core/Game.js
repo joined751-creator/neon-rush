@@ -72,6 +72,7 @@ export class Game {
     this.hud.hide();
     this.audio.setListeners([]);
     document.getElementById('pause-btn').hidden = true;
+    this.showCamBtn(false);
     this.mobile.hide();
     this.updateRotate();
   }
@@ -115,6 +116,7 @@ export class Game {
     this.state = 'race';
     document.getElementById('pause-btn').hidden = false;
     this.mobile.setup(this.race);
+    this.showCamBtn(this.mobile.enabled && this.race.humans.length === 1);
     if (this.mobile.enabled) this.goFullscreen();
     if (this.mobile.enabled && this.gs.settings.steering === 'tilt') this.mobile.requestTilt().then(() => this.mobile.calibrateTilt());
     this.perf = { acc: 0, frames: 0, good: 0 };
@@ -149,6 +151,7 @@ export class Game {
     if (this.state !== 'race') return;
     this.state = 'results';
     this.mobile.hide();
+    this.showCamBtn(false);
     this.updateRotate();
     let gpInfo = null;
     if (this.gp) {
@@ -215,11 +218,18 @@ export class Game {
         else this.goFullscreen();
       });
     }
+    // pointerdown (not click): a second finger's tap while the stick is held never produces a click
+    document.getElementById('cam-btn').addEventListener('pointerdown', (e) => { e.preventDefault(); if (this.state === 'race') this.input.touch[0].cameraEdge = true; });
     this.portraitOk = false;
     document.getElementById('rotate-skip').addEventListener('click', () => { this.portraitOk = true; this.updateRotate(); this.clock.getDelta(); });
     const onResize = () => { this.updateRotate(); if (this.state === 'race') this.mobile.calibrateTilt(); };
     window.addEventListener('resize', onResize);
     screen.orientation?.addEventListener?.('change', onResize);
+  }
+
+  showCamBtn(on) {
+    document.getElementById('cam-btn').hidden = !on;
+    document.body.classList.toggle('cam-on', on);
   }
 
   /** Fullscreen + landscape lock where the browser allows it (Android Chrome); silently ignored elsewhere. */
