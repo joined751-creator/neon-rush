@@ -10,14 +10,16 @@
         <span class="logo-a">NEON</span>
         <span class="logo-b">RUSH</span>
       </div>
-      <p class="tagline">Аркадные неоновые гонки. Дрифт-турбо, нитро, ракеты и сплит-скрин на двоих за одной клавиатурой.</p>
+      <p class="tagline">Аркадные неоновые гонки. Дрифт-турбо, нитро, ракеты и сплит-скрин на двоих — на компьютере, планшете и телефоне.</p>
       <nav class="menu" id="title-menu">
         <button class="mbtn" data-action="play"><span class="mbtn-k">01</span>Заезд</button>
         <button class="mbtn" data-action="quick2"><span class="mbtn-k">02</span>Быстрая дуэль на двоих</button>
         <button class="mbtn" data-action="controls"><span class="mbtn-k">03</span>Управление</button>
         <button class="mbtn" data-action="settings"><span class="mbtn-k">04</span>Настройки</button>
+        <button class="mbtn mbtn-install" id="install-btn" data-action="install" hidden><span class="mbtn-k">05</span>Установить на телефон</button>
       </nav>
-      <p class="hint">Enter — выбрать · ↑↓ — навигация</p>
+      <p class="hint kbd-only">Enter — выбрать · ↑↓ — навигация</p>
+      <p class="hint touch-only">Лучше всего — в горизонтальном положении телефона</p>
     </div>
     <div class="title-badge">
       <div class="badge-row"><b>4</b> трассы</div>
@@ -79,12 +81,12 @@
   <section id="screen-garage" class="screen" hidden>
     <div class="garage-head">
       <h2>Гараж</h2>
-      <span class="eyebrow">Выбери машину и цвет</span>
+      <span class="eyebrow">Выбери машину и цвет<span class="touch-only"> · листай машины свайпом</span></span>
     </div>
     <div class="garage-players" id="garage-players"></div>
     <footer class="garage-foot">
       <button class="btn ghost" data-action="back">Назад</button>
-      <button class="btn primary big" data-action="start">На старт! <kbd>Enter</kbd></button>
+      <button class="btn primary big" data-action="start">На старт! <kbd class="kbd-only">Enter</kbd></button>
     </footer>
   </section>
 
@@ -92,6 +94,12 @@
   <section id="screen-controls" class="screen" hidden>
     <div class="panel narrow">
       <header class="panel-head"><h2>Управление</h2></header>
+      <div class="touch-help touch-only">
+        <div class="tip"><b>Руль-свайп.</b> Коснись левой части экрана и веди палец влево-вправо — появится виртуальный стик. Чем дальше палец, тем круче поворот.</div>
+        <div class="tip"><b>Газ — автоматический.</b> Справа: <b>ДРИФТ</b> (держи в повороте), <b>НИТРО</b>, <b>БОНУС</b> (на кнопке видно, что подобрал), <b>ТОРМ</b> и смена камеры.</div>
+        <div class="tip"><b>Другие схемы.</b> В настройках: стрелки ◀ ▶, руль наклоном телефона или ручная педаль газа.</div>
+        <div class="tip"><b>Вдвоём на планшете.</b> Экран делится пополам — у каждого игрока свои кнопки на своей половине.</div>
+      </div>
       <div class="table-wrap">
         <table class="keys">
           <thead><tr><th></th><th>Игрок 1</th><th>Игрок 2</th><th>Геймпад</th></tr></thead>
@@ -126,8 +134,25 @@
         <div class="field"><label class="flabel">Сплит-скрин</label><div class="seg" id="opt-split"></div></div>
         <div class="field"><label class="flabel">Звук</label><div class="seg" id="opt-sound"></div></div>
         <div class="field"><label class="flabel">Рекорды</label><div class="seg" id="opt-reset"></div></div>
+        <div class="field touch-only"><label class="flabel">Руль на телефоне</label><div class="seg" id="opt-steer"></div></div>
+        <div class="field touch-only"><label class="flabel">Газ</label><div class="seg" id="opt-gas"></div></div>
+        <div class="field touch-only"><label class="flabel">Вибрация</label><div class="seg" id="opt-haptics"></div></div>
       </div>
       <footer class="panel-foot"><button class="btn primary" data-action="back">Готово</button></footer>
+    </div>
+  </section>
+
+  <!-- INSTALL (iOS instructions) -->
+  <section id="screen-install" class="screen" hidden>
+    <div class="panel narrow">
+      <header class="panel-head"><h2>Игра на экране «Домой»</h2></header>
+      <ol class="steps">
+        <li>Открой игру в <b>Safari</b>.</li>
+        <li>Нажми кнопку <b>«Поделиться»</b> <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span> внизу экрана.</li>
+        <li>Выбери <b>«На экран „Домой“»</b> и нажми «Добавить».</li>
+      </ol>
+      <p class="tagline">Игра откроется на весь экран, без адресной строки, и будет работать даже без интернета.</p>
+      <footer class="panel-foot"><button class="btn primary" data-action="back">Понятно</button></footer>
     </div>
   </section>
 
@@ -162,19 +187,18 @@
     </div>
   </section>
 
-  <div id="touch" hidden>
-    <div class="t-left">
-      <button class="tbtn" data-t="left" aria-label="Влево">◀</button>
-      <button class="tbtn" data-t="right" aria-label="Вправо">▶</button>
-    </div>
-    <div class="t-right">
-      <button class="tbtn sm" data-t="item">БОНУС</button>
-      <button class="tbtn sm" data-t="nitro">НИТРО</button>
-      <button class="tbtn sm" data-t="drift">ДРИФТ</button>
-      <button class="tbtn sm" data-t="brake">ТОРМОЗ</button>
+  <div id="touch" hidden></div>
+
+  <div id="rotate" hidden>
+    <div class="rot-box">
+      <svg class="rot-phone" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="6" width="24" height="44" rx="4"/><path d="M29 44h6"/><path d="M50 30a20 20 0 0 1-8 22M42 52l1-6M42 52l-6-1"/></svg>
+      <b>Поверни телефон</b>
+      <span>Горизонтально обзор трассы шире, а кнопкам удобнее.</span>
+      <button class="btn ghost" id="rotate-skip">Играть вертикально</button>
     </div>
   </div>
 
+  <button id="fs-btn" class="icon-btn" aria-label="Во весь экран" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button id="mute" class="icon-btn" aria-label="Звук">♪</button>
   <button id="pause-btn" class="icon-btn" aria-label="Пауза" hidden>II</button>
   <div id="flash"></div>
