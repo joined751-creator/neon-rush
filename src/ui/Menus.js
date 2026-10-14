@@ -282,7 +282,7 @@ export class Menus {
       s.steering = v;
       if (v === 'tilt') eventBus.emit(Events.UI_ACTION, { action: 'tiltPermission' });
     });
-    this.seg('#opt-gas', [[true, 'Авто'], [false, 'Педаль']], s.autoGas !== false, (v) => { s.autoGas = v; });
+    this.seg('#opt-gas', [[false, 'Ручной'], [true, 'Авто']], s.autoGas === true, (v) => { s.autoGas = v; });
     this.seg('#opt-haptics', [[true, 'Вкл'], [false, 'Выкл']], s.haptics !== false, (v) => { s.haptics = v; if (v && navigator.vibrate) try { navigator.vibrate(40); } catch { /* */ } });
     const box = $('#opt-reset');
     box.innerHTML = '';
