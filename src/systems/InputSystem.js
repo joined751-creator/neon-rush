@@ -10,7 +10,8 @@ export class InputSystem {
   constructor() {
     this.keys = new Set();
     this.edges = new Set();
-    this.touch = { steer: 0, gas: false, brake: false, drift: false, nitro: false, item: false };
+    const pad = () => ({ active: false, steer: 0, gas: false, brake: false, drift: false, nitro: false, itemEdge: false, cameraEdge: false, autoGas: true });
+    this.touch = [pad(), pad()];
     this.touchEnabled = false;
     this.padPrev = [{}, {}, {}, {}];
     this.padEdges = new Set();
@@ -57,12 +58,13 @@ export class InputSystem {
       drift = drift || !!pad.buttons[5]?.pressed || !!pad.buttons[4]?.pressed;
       nitro = nitro || !!pad.buttons[2]?.pressed;
     }
-    if (p === 0 && this.touchEnabled) {
-      if (this.touch.steer) steer = this.touch.steer;
-      if (this.touch.gas) throttle = 1;
-      if (this.touch.brake) { brake = 1; throttle = 0; }
-      drift = drift || this.touch.drift;
-      nitro = nitro || this.touch.nitro;
+    const t = this.touch[p];
+    if (this.touchEnabled && t?.active) {
+      if (t.steer) steer = t.steer;
+      if (t.gas) throttle = 1;
+      if (t.brake) { brake = 1; throttle = 0; }
+      drift = drift || t.drift;
+      nitro = nitro || t.nitro;
     }
     return { steer: Math.max(-1, Math.min(1, steer)), throttle, brake, drift, nitro };
   }
@@ -71,7 +73,9 @@ export class InputSystem {
   pressed(p, action) {
     const k = p === 0 ? KEYS.P1 : KEYS.P2;
     if (this.edge(k[action])) return true;
-    if (p === 0 && action === 'item' && this.touch.itemEdge) { this.touch.itemEdge = false; return true; }
+    const t = this.touch[p];
+    if (t?.active && action === 'item' && t.itemEdge) { t.itemEdge = false; return true; }
+    if (t?.active && action === 'camera' && t.cameraEdge) { t.cameraEdge = false; return true; }
     const map = { item: 1, camera: 3, respawn: 8 };
     return this.padEdges.has(`${p}:${map[action]}`);
   }

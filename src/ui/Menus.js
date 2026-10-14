@@ -29,6 +29,7 @@ export class Menus {
     $('#mute').addEventListener('click', () => { eventBus.emit(Events.AUDIO_TOGGLE); this.syncMute(); });
     $('#pause-btn').addEventListener('click', () => eventBus.emit(Events.UI_ACTION, { action: 'pause' }));
     this.syncMute();
+    this.setupGarageSwipe();
   }
 
   syncMute() { $('#mute').classList.toggle('off', !!this.gs.settings.muted); }
@@ -73,7 +74,7 @@ export class Menus {
     const scr = $(`#screen-${this.current}`);
     if (!scr || scr.hidden) return false;
     if (this.current === 'garage') return this.garageKey(e);
-    const items = $$('.mbtn', scr);
+    const items = $$('.mbtn', scr).filter((b) => !b.hidden);
     const idx = items.findIndex((b) => b.classList.contains('sel'));
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { this.sel(items, idx + 1); return true; }
     if (e.code === 'ArrowUp' || e.code === 'KeyW') { this.sel(items, idx - 1); return true; }
@@ -202,7 +203,7 @@ export class Menus {
     const g = this.gs.garage[p];
     const t = CAR_TYPES[g.type];
     const other = this.gs.settings.players > 1 ? this.gs.garage[1 - p].color : -1;
-    const keys = p === 0 ? '<kbd>A</kbd><kbd>D</kbd> машина · <kbd>W</kbd><kbd>S</kbd> цвет' : '<kbd>←</kbd><kbd>→</kbd> машина · <kbd>↑</kbd><kbd>↓</kbd> цвет';
+    const keys = `<span class="kbd-only">${p === 0 ? '<kbd>A</kbd><kbd>D</kbd> машина · <kbd>W</kbd><kbd>S</kbd> цвет' : '<kbd>←</kbd><kbd>→</kbd> машина · <kbd>↑</kbd><kbd>↓</kbd> цвет'}</span>`;
     el.innerHTML = `
       <div class="gp-head"><span class="gp-tag" style="color:${hexCss(CAR_COLORS[g.color].hex)}">ИГРОК ${p + 1}</span><span class="gp-keys">${keys}</span></div>
       <div class="gp-car"><button data-d="-1" aria-label="Предыдущая">◀</button><div class="gp-name">${t.name}</div><button data-d="1" aria-label="Следующая">▶</button></div>
@@ -216,6 +217,23 @@ export class Menus {
       <div class="swatches">${CAR_COLORS.map((c, i) => `<button class="sw${i === g.color ? ' on' : ''}${i === other ? ' taken' : ''}" data-c="${i}" title="${c.name}" style="background:${hexCss(c.hex)};color:${hexCss(c.hex)}"></button>`).join('')}</div>`;
     $$('.gp-car button', el).forEach((b) => { b.onclick = () => this.changeCar(p, +b.dataset.d); });
     $$('.sw', el).forEach((b) => { b.onclick = () => this.setColor(p, +b.dataset.c); });
+  }
+
+  /** Swipe left/right over the showroom to flip through cars (per half in two-player mode). */
+  setupGarageSwipe() {
+    const scr = $('#screen-garage');
+    let sx = null, sy = 0, side = 0;
+    scr.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.gp, button')) return;
+      sx = e.clientX; sy = e.clientY;
+      side = this.gs.settings.players > 1 && e.clientX > window.innerWidth / 2 ? 1 : 0;
+    });
+    scr.addEventListener('pointerup', (e) => {
+      if (sx === null) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      sx = null;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) this.changeCar(side, dx < 0 ? 1 : -1);
+    });
   }
 
   changeCar(p, d) {
@@ -260,6 +278,12 @@ export class Menus {
     this.seg('#opt-quality', [['low', 'Низкая'], ['medium', 'Средняя'], ['high', 'Высокая']], s.quality, (v) => { s.quality = v; eventBus.emit(Events.UI_ACTION, { action: 'quality' }); });
     this.seg('#opt-split', [['vertical', 'Слева / справа'], ['horizontal', 'Сверху / снизу']], s.split, (v) => { s.split = v; });
     this.seg('#opt-sound', [[false, 'Вкл'], [true, 'Выкл']], s.muted, (v) => { if (v !== s.muted) eventBus.emit(Events.AUDIO_TOGGLE); this.syncMute(); });
+    this.seg('#opt-steer', [['swipe', 'Свайп'], ['buttons', 'Стрелки'], ['tilt', 'Наклон']], s.steering || 'swipe', (v) => {
+      s.steering = v;
+      if (v === 'tilt') eventBus.emit(Events.UI_ACTION, { action: 'tiltPermission' });
+    });
+    this.seg('#opt-gas', [[true, 'Авто'], [false, 'Педаль']], s.autoGas !== false, (v) => { s.autoGas = v; });
+    this.seg('#opt-haptics', [[true, 'Вкл'], [false, 'Выкл']], s.haptics !== false, (v) => { s.haptics = v; if (v && navigator.vibrate) try { navigator.vibrate(40); } catch { /* */ } });
     const box = $('#opt-reset');
     box.innerHTML = '';
     const b = document.createElement('button');

@@ -103,6 +103,15 @@ export class RenderSystem {
 
   setQuality(q) {
     this.quality = q;
+    this.scale = 1;
+    this.resize();
+  }
+
+  /** Dynamic resolution (0.5..1) — lowered automatically when FPS drops on phones. */
+  setScale(s) {
+    const v = Math.max(0.5, Math.min(1, s));
+    if (Math.abs(v - (this.scale ?? 1)) < 0.01) return;
+    this.scale = v;
     this.resize();
   }
 
@@ -126,7 +135,7 @@ export class RenderSystem {
   resize() {
     const W = window.innerWidth, H = window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1,
-      this.quality === 'high' ? GAME.MAX_DPR_HIGH : this.quality === 'medium' ? GAME.MAX_DPR_MED : GAME.MAX_DPR_LOW);
+      this.quality === 'high' ? GAME.MAX_DPR_HIGH : this.quality === 'medium' ? GAME.MAX_DPR_MED : GAME.MAX_DPR_LOW) * (this.scale ?? 1);
     this.dpr = dpr;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(W, H);
