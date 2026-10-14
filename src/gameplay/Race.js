@@ -352,7 +352,7 @@ export class Race {
         b.x += nx * overlap * (ma / (ma + mb)); b.z += nz * overlap * (ma / (ma + mb));
         const rel = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
         if (rel < 0) {
-          const jImp = (-(1 + 0.45) * rel) / (1 / ma + 1 / mb);
+          const jImp = (-(1 + CAR.CAR_BOUNCE) * rel) / (1 / ma + 1 / mb);
           a.vx -= (jImp / ma) * nx; a.vz -= (jImp / ma) * nz;
           b.vx += (jImp / mb) * nx; b.vz += (jImp / mb) * nz;
           if (-rel > 3) {
@@ -560,7 +560,7 @@ export class Race {
     const car = this.humans[p];
     if (!car) return;
     if (on) this.drivers.set(car, new AIDriver(car, this.track, DIFFICULTY[2]));
-    else this.drivers.delete(car);
+    else { this.drivers.delete(car); car.accelMult = 1; }
   }
 
   // ---------------------------------------------------------------- ghost
