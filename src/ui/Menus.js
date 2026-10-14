@@ -27,7 +27,7 @@ export class Menus {
       if (b && b !== this.lastHover) { this.lastHover = b; eventBus.emit(Events.UI_HOVER); }
     });
     $('#mute').addEventListener('click', () => { eventBus.emit(Events.AUDIO_TOGGLE); this.syncMute(); });
-    $('#pause-btn').addEventListener('click', () => eventBus.emit(Events.UI_ACTION, { action: 'pause' }));
+    $('#pause-btn').addEventListener('pointerdown', (e) => { e.preventDefault(); eventBus.emit(Events.UI_ACTION, { action: 'pause' }); });
     this.syncMute();
     this.setupGarageSwipe();
   }
@@ -278,11 +278,12 @@ export class Menus {
     this.seg('#opt-quality', [['low', 'Низкая'], ['medium', 'Средняя'], ['high', 'Высокая']], s.quality, (v) => { s.quality = v; eventBus.emit(Events.UI_ACTION, { action: 'quality' }); });
     this.seg('#opt-split', [['vertical', 'Слева / справа'], ['horizontal', 'Сверху / снизу']], s.split, (v) => { s.split = v; });
     this.seg('#opt-sound', [[false, 'Вкл'], [true, 'Выкл']], s.muted, (v) => { if (v !== s.muted) eventBus.emit(Events.AUDIO_TOGGLE); this.syncMute(); });
-    this.seg('#opt-steer', [['swipe', 'Свайп'], ['buttons', 'Стрелки'], ['tilt', 'Наклон']], s.steering || 'swipe', (v) => {
+    this.seg('#opt-steer', [['swipe', 'Джойстик'], ['buttons', 'Стрелки'], ['tilt', 'Наклон']], s.steering || 'swipe', (v) => {
       s.steering = v;
       if (v === 'tilt') eventBus.emit(Events.UI_ACTION, { action: 'tiltPermission' });
     });
     this.seg('#opt-gas', [[false, 'Ручной'], [true, 'Авто']], s.autoGas === true, (v) => { s.autoGas = v; });
+    $('#opt-gas').classList.toggle('disabled', s.steering === 'buttons'); // arrows scheme always has auto-gas
     this.seg('#opt-haptics', [[true, 'Вкл'], [false, 'Выкл']], s.haptics !== false, (v) => { s.haptics = v; if (v && navigator.vibrate) try { navigator.vibrate(40); } catch { /* */ } });
     const box = $('#opt-reset');
     box.innerHTML = '';
