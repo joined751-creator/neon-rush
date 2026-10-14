@@ -10,6 +10,8 @@ import { Garage } from '../level/Garage.js';
 import { Menus } from '../ui/Menus.js';
 import { HUD } from '../ui/HUD.js';
 import { TRACKS } from '../level/TrackDefs.js';
+import { MobileControls } from '../systems/MobileControls.js';
+import { setupPWA } from '../systems/PWA.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -44,7 +46,10 @@ export class Game {
     window.addEventListener('keydown', unlock);
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'race') this.pause(); });
 
-    this.setupTouch();
+    this.mobile = new MobileControls(this.input, this.gs);
+    this.setupMobileShell();
+    setupPWA(this.menus);
+    this.perf = { acc: 0, frames: 0, good: 0 };
     this.startAttract();
     this.menus.show('title');
     this.render.renderer.setAnimationLoop(() => this.loop());
@@ -67,7 +72,8 @@ export class Game {
     this.hud.hide();
     this.audio.setListeners([]);
     document.getElementById('pause-btn').hidden = true;
-    document.getElementById('touch').hidden = true;
+    this.mobile.hide();
+    this.updateRotate();
   }
 
   openGarage() {
@@ -91,6 +97,7 @@ export class Game {
     this.gs.screen = 'countdown';
     this.render.setScene(this.scene);
     this.input.players = this.gs.settings.players;
+    if (this.mobile.enabled && this.gs.settings.players > 1) this.gs.settings.split = 'vertical'; // each player gets a half with own buttons
     let settings = this.gs.settings;
     if (settings.mode === 'gp') {
       if (newGP || !this.gp) this.gp = { round: 0, points: {}, roster: null, lastRows: null };
@@ -107,14 +114,18 @@ export class Game {
     eventBus.emit(Events.MUSIC_RACE);
     this.state = 'race';
     document.getElementById('pause-btn').hidden = false;
-    const touch = this.input.touchEnabled && this.gs.settings.players === 1;
-    document.getElementById('touch').hidden = !touch;
+    this.mobile.setup(this.race);
+    if (this.mobile.enabled) this.goFullscreen();
+    if (this.mobile.enabled && this.gs.settings.steering === 'tilt') this.mobile.requestTilt().then(() => this.mobile.calibrateTilt());
+    this.perf = { acc: 0, frames: 0, good: 0 };
+    this.updateRotate();
     this.flash();
   }
 
   pause() {
     if (this.state !== 'race') return;
     this.state = 'paused';
+    this.mobile.reset();
     this.menus.show('pause');
     this.audio.setListeners([]);
   }
@@ -137,6 +148,8 @@ export class Game {
   onResults(res) {
     if (this.state !== 'race') return;
     this.state = 'results';
+    this.mobile.hide();
+    this.updateRotate();
     let gpInfo = null;
     if (this.gp) {
       this.gp.lastRows = res.rows;
@@ -171,6 +184,7 @@ export class Game {
       case 'pause': this.state === 'race' ? this.pause() : this.resume(); break;
       case 'quit': this.quit(); break;
       case 'quality': this.render.setQuality(this.gs.settings.quality); break;
+      case 'tiltPermission': this.mobile.requestTilt(); break;
       default: break;
     }
   }
@@ -190,40 +204,64 @@ export class Game {
     requestAnimationFrame(() => { f.style.transition = 'opacity 0.6s'; f.style.opacity = '0'; });
   }
 
-  setupTouch() {
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.input.touchEnabled = isTouch;
-    if (!isTouch) return;
-    const t = this.input.touch;
-    t.gas = true;
-    for (const b of document.querySelectorAll('.tbtn')) {
-      const k = b.dataset.t;
-      const down = (e) => {
-        e.preventDefault();
-        b.classList.add('on');
-        if (k === 'left') t.steer = -1;
-        else if (k === 'right') t.steer = 1;
-        else if (k === 'item') t.itemEdge = true;
-        else t[k] = true;
-      };
-      const up = (e) => {
-        e.preventDefault();
-        b.classList.remove('on');
-        if (k === 'left' && t.steer < 0) t.steer = 0;
-        else if (k === 'right' && t.steer > 0) t.steer = 0;
-        else if (k !== 'item' && k !== 'left' && k !== 'right') t[k] = false;
-      };
-      b.addEventListener('pointerdown', down);
-      b.addEventListener('pointerup', up);
-      b.addEventListener('pointercancel', up);
-      b.addEventListener('pointerleave', up);
+  // ---------------------------------------------------------------- mobile shell
+  setupMobileShell() {
+    const fs = document.getElementById('fs-btn');
+    const canFS = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    if (this.mobile.enabled && canFS) {
+      fs.hidden = false;
+      fs.addEventListener('click', () => {
+        if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+        else this.goFullscreen();
+      });
     }
+    this.portraitOk = false;
+    document.getElementById('rotate-skip').addEventListener('click', () => { this.portraitOk = true; this.updateRotate(); this.clock.getDelta(); });
+    const onResize = () => { this.updateRotate(); if (this.state === 'race') this.mobile.calibrateTilt(); };
+    window.addEventListener('resize', onResize);
+    screen.orientation?.addEventListener?.('change', onResize);
+  }
+
+  /** Fullscreen + landscape lock where the browser allows it (Android Chrome); silently ignored elsewhere. */
+  goFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    try {
+      const p = req.call(el, { navigationUI: 'hide' });
+      Promise.resolve(p).then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+    } catch { /* not allowed (iframe / iOS) */ }
+  }
+
+  /** Portrait phone during a race → overlay asking to rotate; the race waits underneath. */
+  updateRotate() {
+    const portrait = window.innerHeight > window.innerWidth * 1.05;
+    this.rotateBlock = this.mobile.enabled && portrait && !this.portraitOk && this.state === 'race';
+    document.getElementById('rotate').hidden = !this.rotateBlock;
+    document.body.classList.toggle('portrait', portrait);
+  }
+
+  /** Dynamic resolution: phones that can't hold ~45 fps get a lower render scale, recovered when smooth. */
+  adaptPerformance(dt) {
+    if (this.state !== 'race' || this.gs.settings.quality === 'low') return;
+    const pf = this.perf;
+    pf.acc += dt; pf.frames++;
+    if (pf.acc < 2) return;
+    const fps = pf.frames / pf.acc;
+    pf.acc = 0; pf.frames = 0;
+    const sc = this.render.scale ?? 1;
+    if (fps < 42 && sc > 0.55) { this.render.setScale(sc - 0.15); pf.good = 0; }
+    else if (fps > 57) { pf.good++; if (pf.good >= 3 && sc < 1) { this.render.setScale(sc + 0.1); pf.good = 0; } }
+    else pf.good = 0;
   }
 
   // ---------------------------------------------------------------- loop
   loop() {
-    const dt = Math.min(this.clock.getDelta(), GAME.MAX_DELTA);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, GAME.MAX_DELTA);
     this.time += dt;
+    this.adaptPerformance(raw);
     this.step(dt);
   }
 
@@ -233,7 +271,8 @@ export class Game {
     else if (this.state === 'paused' && this.input.pausePressed()) this.resume();
 
     if (this.state === 'garage') this.garage.update(dt);
-    else if (this.race && this.state !== 'paused') this.race.update(dt);
+    else if (this.race && this.state !== 'paused' && !this.rotateBlock) this.race.update(dt);
+    if (this.state === 'race') this.mobile.update(this.race);
     this.render.setSpeedFX(this.state === 'race' || this.state === 'results' ? this.race.fxStrength : [0, 0]);
 
     if (this.state === 'race' || this.state === 'results') this.hud.update();
