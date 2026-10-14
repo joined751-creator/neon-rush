@@ -95,7 +95,7 @@ export class Car {
     if (this.eliminated) return;
     const c = this.controls;
     const top = this.topSpeed;
-    const accel = CAR.BASE_ACCEL + CAR.ACCEL_RANGE * this.type.accel;
+    const accel = (CAR.BASE_ACCEL + CAR.ACCEL_RANGE * this.type.accel) * (this.accelMult || 1);
     const handling = 0.75 + this.type.handling * 0.5;
 
     this.boostTime = Math.max(0, this.boostTime - dt);
@@ -145,17 +145,24 @@ export class Car {
       if (this.empTime > 0) vF *= Math.exp(-0.8 * dt);
       if (holding) vF *= Math.exp(-6 * dt);
 
-      // Drift state machine
-      if (can && c.drift && !this.drifting && Math.abs(steer) > 0.25 && vF > CAR.DRIFT_MIN_SPEED) {
+      // Drift state machine (arcade "power slide"): the body swings out visually, but the physics stays
+      // grippy and the line is steered with the stick — full lock tightens, counter-steer widens.
+      if (can && c.drift && !this.drifting && Math.abs(steer) > CAR.DRIFT_MIN_STEER && vF > CAR.DRIFT_MIN_SPEED) {
         this.drifting = true; this.driftDir = Math.sign(steer); this.driftTime = 0; this.driftLevel = 0; this.hop = 0.18;
+        this.counterTime = 0;
       }
-      if (this.drifting && (!c.drift || vF < CAR.DRIFT_MIN_SPEED * 0.55 || !can)) this.endDrift(can);
+      if (this.drifting) {
+        // holding hard counter-steer for a moment straightens the car out of the slide
+        this.counterTime = this.driftDir * steer < -0.6 ? this.counterTime + dt : 0;
+        if (!c.drift || vF < CAR.DRIFT_MIN_SPEED * 0.55 || !can || this.counterTime > CAR.DRIFT_EXIT_TIME) this.endDrift(can);
+      }
 
       const speedFactor = Math.min(1, Math.abs(vF) / 9) * (1 - 0.28 * Math.min(1, Math.abs(vF) / top));
       if (this.drifting) {
         const tight = this.driftDir * steer; // -1..1
-        const amount = 0.62 + 0.5 * tight;
-        yawRate = this.driftDir * CAR.TURN_RATE * 1.12 * amount * speedFactor;
+        const amount = CAR.DRIFT_YAW_MIN + (1 - CAR.DRIFT_YAW_MIN) * (tight + 1) / 2; // 0.15..1
+        yawRate = this.driftDir * CAR.TURN_RATE * CAR.DRIFT_TURN * handling * amount * speedFactor;
+        vF -= vF * CAR.DRIFT_DRAG * dt;
         this.driftTime += dt * (0.75 + 0.5 * Math.max(0, tight));
         const lvl = CAR.DRIFT_LEVELS.filter((t) => this.driftTime >= t).length;
         if (lvl > this.driftLevel) {
@@ -169,16 +176,19 @@ export class Car {
 
       let grip = this.drifting ? CAR.DRIFT_GRIP : CAR.GRIP * (0.75 + 0.45 * this.type.handling);
       if (this.spinTime > 0) grip = 0.9;
-      const newVR = vR * Math.exp(-grip * dt);
-      if (this.drifting) vF += Math.abs(vR - newVR) * 0.3;
-      vR = newVR;
+      vR *= Math.exp(-grip * dt);
     } else {
+      // Arcade air control: the car (and its flight path) gently line up with the road below,
+      // so ramps on curving sections don't throw everyone into the wall.
       this.airTime += dt;
-      yawRate = steer * 0.6;
+      const qa = this.track.closest(this.x, this.z, this.trackIndex);
+      const roadH = Math.abs(angleDiff(this.heading, qa.heading)) < Math.PI / 2 ? qa.heading : qa.heading + Math.PI;
+      yawRate = steer * CAR.AIR_STEER - angleDiff(roadH, this.heading) * CAR.AIR_ALIGN;
+      vR *= Math.exp(-CAR.AIR_GRIP * dt);
     }
     if (this.spinTime > 0) {
       yawRate = -this.spinDir * 10 * (this.spinTime / CAR.SPINOUT_TIME + 0.2);
-      vF *= Math.exp(-1.6 * dt);
+      vF *= Math.exp(-CAR.SPIN_DECEL * dt);
     }
 
     this.vx = fx * vF + rx * vR;
@@ -239,7 +249,7 @@ export class Car {
       if (ramp && this.speed > 12) {
         this.airborne = true;
         this.airTime = 0;
-        this.vy = this.speed * this.track.rampSlope + 3.5;
+        this.vy = Math.min(CAR.JUMP_VY_MAX, this.speed * this.track.rampSlope + 3.5);
         eventBus.emit(Events.CAR_JUMP, { car: this });
       } else {
         this.y += (groundY - this.y) * Math.min(1, dt * 30);

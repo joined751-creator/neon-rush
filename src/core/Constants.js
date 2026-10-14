@@ -46,11 +46,16 @@ export const CAR = {
   TURN_RATE: 1.9, // rad/s at full lock
   HANDLING_RANGE: 0.9,
   GRIP: 8.5,
-  DRIFT_GRIP: 1.4,
+  DRIFT_GRIP: 5.2, // was 1.4: the car kept its sideways momentum and slid into walls
   DRIFT_MIN_SPEED: 16,
-  DRIFT_LEVELS: [0.9, 1.9, 3.0],
+  DRIFT_MIN_STEER: 0.3,
+  DRIFT_TURN: 1.18, // yaw multiplier at full lock while drifting
+  DRIFT_YAW_MIN: 0.15, // yaw share with full counter-steer (wide line)
+  DRIFT_EXIT_TIME: 0.4, // seconds of hard counter-steer that straighten the car out of a slide
+  DRIFT_DRAG: 0.035, // gentle speed bleed while sliding
+  DRIFT_LEVELS: [0.55, 1.25, 2.1],
   DRIFT_BOOST_TIME: [0.55, 1.0, 1.6],
-  DRIFT_VISUAL_ANGLE: 0.38,
+  DRIFT_VISUAL_ANGLE: 0.46,
   BOOST_ACCEL: 30,
   BOOST_TOP_MULT: 1.3,
   NITRO_DRAIN: 32,
@@ -61,10 +66,16 @@ export const CAR = {
   NITRO_JUMP: 12,
   PAD_BOOST_TIME: 1.1,
   WALL_BOUNCE: 0.35,
+  CAR_BOUNCE: 0.2, // car-to-car restitution (was 0.45 — bumps knocked bots far back)
   WALL_SCRAPE: 0.6,
   GRAVITY: 30,
   JUMP_VY: 9,
-  SPINOUT_TIME: 1.25,
+  JUMP_VY_MAX: 11,
+  AIR_STEER: 0.9, // rad/s of steering in the air
+  AIR_ALIGN: 2.2, // how fast the nose lines up with the road while airborne
+  AIR_GRIP: 2.5, // sideways velocity bleed in the air (keeps the flight path on the road)
+  SPINOUT_TIME: 1.0,
+  SPIN_DECEL: 0.75, // keeps ~half the speed through a spin-out (was 1.6: a hit nearly stopped the car)
   SLIPSTREAM_DIST: 26,
   SLIPSTREAM_LATERAL: 3,
   SLIPSTREAM_ACCEL: 7,
@@ -94,10 +105,12 @@ export const CAR_COLORS = [
 
 export const AI_NAMES = ['Вольт', 'Фантом', 'Рысь', 'Блиц', 'Кобра', 'Гроза', 'Сокол', 'Мираж'];
 
+// speedMult — top speed vs the player's car; cornerSkill — share of the real turning limit used in bends;
+// drift — how eagerly bots power-slide; ease — how much a leading bot lifts off; recovery — post-crash pace.
 export const DIFFICULTY = [
-  { id: 'easy', name: 'Лёгкий', speedMult: 0.86, cornerSkill: 0.8, itemSkill: 0.4 },
-  { id: 'normal', name: 'Средний', speedMult: 0.95, cornerSkill: 0.92, itemSkill: 0.7 },
-  { id: 'hard', name: 'Безумный', speedMult: 1.04, cornerSkill: 1.0, itemSkill: 1.0 },
+  { id: 'easy', name: 'Лёгкий', speedMult: 0.9, cornerSkill: 0.7, itemSkill: 0.4, drift: 0.15, ease: 1, recovery: 0.5 },
+  { id: 'normal', name: 'Средний', speedMult: 0.98, cornerSkill: 0.8, itemSkill: 0.7, drift: 0.55, ease: 0.6, recovery: 1 },
+  { id: 'hard', name: 'Безумный', speedMult: 1.04, cornerSkill: 0.88, itemSkill: 1.0, drift: 1, ease: 0.25, recovery: 1.3 },
 ];
 
 export const AI = {
@@ -108,9 +121,10 @@ export const AI = {
   CURVE_SPEED_K: 1.25,
   LANE_DRIFT_RATE: 0.25,
   AVOID_DIST: 14,
-  RUBBER_FAR: 160,
-  RUBBER_SLOW: 0.9,
-  RUBBER_FAST: 1.1,
+  RUBBER_RANGE: 220, // metres behind/ahead of the best human for full catch-up / ease-off
+  RUBBER_CATCHUP: 0.1, // up to +10% top speed when far behind
+  RUBBER_EASE: 0.08, // up to −8% (scaled by difficulty) when far ahead
+  RECOVERY_ACCEL: 0.7, // extra acceleration while a bot is below 55% of its top speed
 };
 
 export const ITEMS = {
