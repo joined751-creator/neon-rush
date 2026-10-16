@@ -12,6 +12,12 @@ const FRAG = /* glsl */`
   void main() { gl_FragColor = vec4(uColor, vFade); }
 `;
 
+/** Cleaner look: hide the old fake headlight cones (read as grey wedges on the road) and calm the underglow. */
+function tidyModel(m) {
+  m.body.traverse((o) => { if (o.isMesh && o.geometry?.type === 'ConeGeometry' && o.geometry.parameters.radius > 1) o.visible = false; });
+  if (m.glow) { m.glow.scale.set(0.78, 0.86, 1); m.glow.material.color.multiplyScalar(0.55); }
+}
+
 /**
  * Neon taillight streaks: two thin additive ribbons per car that trail behind at speed
  * (the classic long-exposure look of night racing). One draw call per car.
@@ -20,6 +26,7 @@ export class LightTrails {
   constructor(scene, cars) {
     this.scene = scene;
     this.items = cars.map((car) => {
+      tidyModel(car.model);
       const geo = new THREE.BufferGeometry();
       const pos = new Float32Array(2 * N * 2 * 3); // 2 trails × N points × 2 verts
       const fade = new Float32Array(2 * N * 2);
