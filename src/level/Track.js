@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { TRACK } from '../core/Constants.js';
-import {
-  roadTexture, roadEmissiveTexture, wallEmissiveTexture, checkerTexture, boostPadTexture, bannerTexture,
-} from './Textures.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { wallEmissiveTexture, boostPadTexture } from './Textures.js';
+import { qualityProfile } from './WorldKit.js';
+import { roadMaterial, barrierMaterial } from './RoadMaterials.js';
 
 const RAMP_HEIGHT = 1.7;
 
@@ -161,113 +162,57 @@ export class Track {
     }
   }
 
-  /** Builds visible geometry into a group. */
+  /** Builds visible geometry into a group (purely visual; physics only uses the centre-line data). */
   build(theme, envMap) {
     const group = new THREE.Group();
-    const n = this.n;
     const h = this.half;
     const wallOff = h + TRACK.WALL_OFFSET;
-    this.disposables = [];
+    const qp = qualityProfile();
 
-    // Road ribbon
-    const roadMap = roadTexture();
-    const roadEm = roadEmissiveTexture();
-    const road = this.ribbon((i, side) => [side * (wallOff + 0.05), 0.02], { vScale: 1 / 22, uFlip: false });
-    const roadMat = new THREE.MeshStandardMaterial({
-      map: roadMap, emissiveMap: roadEm, emissive: new THREE.Color(theme.roadLine), emissiveIntensity: 1.6,
-      roughness: theme.particles === 'rain' ? 0.18 : 0.42, metalness: theme.particles === 'rain' ? 0.55 : 0.25,
-      envMap, envMapIntensity: 0.6,
-    });
-    group.add(new THREE.Mesh(road, roadMat));
+    // Road: one ribbon with a procedural asphalt + markings shader
+    const road = new THREE.Mesh(this.roadGeometry(wallOff + 0.05), roadMaterial(this, theme, envMap, qp));
+    road.matrixAutoUpdate = false;
+    group.add(road);
 
-    // Walls (both sides, inner faces) + neon top
-    const wallEm = wallEmissiveTexture();
-    const wallMatA = new THREE.MeshStandardMaterial({
-      color: 0x0d0a16, emissive: new THREE.Color(theme.wall), emissiveMap: wallEm, emissiveIntensity: 1.5,
-      roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide,
-    });
-    const wallMatB = wallMatA.clone();
-    wallMatB.emissive = new THREE.Color(theme.wall2);
-    for (const side of [-1, 1]) {
-      const wall = this.ribbonVertical(side * wallOff, 0, TRACK.WALL_HEIGHT);
-      group.add(new THREE.Mesh(wall, side < 0 ? wallMatA : wallMatB));
-      // dark skirt down to the ground so elevated road never floats
-      const skirt = this.ribbonVertical(side * (wallOff + 0.05), -60, 0.0, true);
-      group.add(new THREE.Mesh(skirt, new THREE.MeshBasicMaterial({ color: 0x050308, side: THREE.DoubleSide })));
-    }
+    // Barriers: inner face + neon top cap + outer skirt down to the ground, both sides in one mesh
+    const bar = new THREE.Mesh(this.barrierGeometry(wallOff), barrierMaterial(theme, envMap));
+    bar.matrixAutoUpdate = false;
+    group.add(bar);
+
+    // Viaduct pillars + cross beams where the road is elevated (shaded by the barrier material)
+    const piers = this.pierGeometry();
+    if (piers) group.add(new THREE.Mesh(piers, bar.material));
+
     // Underside
-    const under = this.ribbon((i, side) => [side * (wallOff + 0.05), -0.4], { vScale: 0.05 });
+    const under = this.ribbon((i, side) => [side * (wallOff + 0.4), -0.4], { vScale: 0.05 });
     group.add(new THREE.Mesh(under, new THREE.MeshBasicMaterial({ color: 0x050308, side: THREE.BackSide })));
 
-    // Light posts every ~50 m: emissive rings on poles
-    const poleGeo = new THREE.CylinderGeometry(0.12, 0.16, 7, 6);
-    poleGeo.translate(0, 3.5, 0);
-    const ringGeo = new THREE.TorusGeometry(0.7, 0.09, 6, 16);
-    const every = Math.max(1, Math.round(50 / this.step));
-    const count = Math.floor(n / every) * 2;
-    const poles = new THREE.InstancedMesh(poleGeo, new THREE.MeshStandardMaterial({ color: 0x1a1426, metalness: 0.7, roughness: 0.4 }), count);
-    const rings = new THREE.InstancedMesh(ringGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(theme.wall2).multiplyScalar(2.2) }), count);
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-    let c = 0;
-    for (let i = 0; i < n && c < count; i += every) {
-      for (const side of [-1, 1]) {
-        const x = this.px[i] + this.rx[i] * side * (wallOff + 1.2);
-        const z = this.pz[i] + this.rz[i] * side * (wallOff + 1.2);
-        m.makeTranslation(x, this.py[i], z);
-        poles.setMatrixAt(c, m);
-        e.set(0, Math.atan2(this.tx[i], this.tz[i]), 0);
-        q.setFromEuler(e);
-        m.compose(new THREE.Vector3(x, this.py[i] + 7.2, z), q, new THREE.Vector3(1, 1, 1));
-        rings.setMatrixAt(c, m);
-        c++;
-      }
-    }
-    poles.count = rings.count = c;
-    group.add(poles, rings);
-
-    // Start/finish line + gantry
-    const p0 = this.pointAt(0);
-    const line = new THREE.Mesh(new THREE.PlaneGeometry(this.width + 1.2, 3), new THREE.MeshBasicMaterial({ map: checkerTexture() }));
-    line.rotation.order = 'YXZ';
-    line.rotation.set(-Math.PI / 2, p0.heading, 0);
-    line.position.set(p0.x, p0.y + 0.04, p0.z);
-    group.add(line);
-    const gantry = new THREE.Group();
-    const pillarGeo = new THREE.BoxGeometry(1.2, 9, 1.2);
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x14101e, metalness: 0.8, roughness: 0.3, envMap });
-    for (const side of [-1, 1]) {
-      const pl = new THREE.Mesh(pillarGeo, pillarMat);
-      pl.position.set(side * (wallOff + 1.4), 4.5, 0);
-      gantry.add(pl);
-    }
-    const bannerTex = bannerTexture('NEON RUSH', theme.wall, 'СТАРТ  ·  ФИНИШ');
-    const banner = new THREE.Mesh(new THREE.BoxGeometry(this.width + 4.4, 2.6, 0.6), [
-      pillarMat, pillarMat, pillarMat, pillarMat,
-      new THREE.MeshBasicMaterial({ map: bannerTex }), new THREE.MeshBasicMaterial({ map: bannerTex }),
-    ]);
-    banner.position.y = 9.2;
-    gantry.add(banner);
-    gantry.position.set(p0.x, p0.y, p0.z);
-    gantry.rotation.y = p0.heading;
-    group.add(gantry);
-
-    // Boost pads
+    // Boost pads (one merged mesh; Race animates padMaterial.map.offset)
     const padTex = boostPadTexture();
     this.padMaterial = new THREE.MeshBasicMaterial({
       map: padTex, color: new THREE.Color(theme.wall2).multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     });
     padTex.repeat.set(1, 2);
+    const pads = [];
+    const m4 = new THREE.Matrix4(), e = new THREE.Euler(), q = new THREE.Quaternion(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
     for (const pad of this.boostPads) {
       const p = this.pointAt(pad.s, pad.lateral);
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(TRACK.BOOST_PAD_WIDTH, TRACK.BOOST_PAD_LENGTH), this.padMaterial);
-      mesh.rotation.order = 'YXZ';
-      mesh.rotation.set(-Math.PI / 2, p.heading + Math.PI, 0);
-      mesh.position.set(p.x, p.y + 0.06, p.z);
+      const g = new THREE.PlaneGeometry(TRACK.BOOST_PAD_WIDTH, TRACK.BOOST_PAD_LENGTH);
+      e.set(-Math.PI / 2, p.heading + Math.PI, 0, 'YXZ');
+      g.applyMatrix4(m4.compose(v.set(p.x, p.y + 0.06, p.z), q.setFromEuler(e), one));
+      pads.push(g);
+    }
+    if (pads.length) {
+      const merged = mergeGeometries(pads, false);
+      pads.forEach((g) => g.dispose());
+      const mesh = new THREE.Mesh(merged, this.padMaterial);
       mesh.renderOrder = 3;
       group.add(mesh);
-    }
+    } else padTex.dispose();
 
     // Ramps
+    const wallEm = this.ramps.length ? wallEmissiveTexture() : null;
     for (const r of this.ramps) {
       const geo = this.rampGeometry(r);
       const ramp = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
@@ -277,6 +222,163 @@ export class Track {
     }
 
     return group;
+  }
+
+  /** Road ribbon with per-vertex data for the road shader: aRoad = (lateral m, s m, kerbLeft, kerbRight), aRoad2 = (racing-line lateral, 0). */
+  roadGeometry(halfW) {
+    const n = this.n;
+    const { kerbL, kerbR, wear } = this.visualProfile();
+    const pos = new Float32Array((n + 1) * 2 * 3);
+    const a1 = new Float32Array((n + 1) * 2 * 4);
+    const a2 = new Float32Array((n + 1) * 2 * 2);
+    const idx = new Uint32Array(n * 6);
+    for (let k = 0; k <= n; k++) {
+      const i = k % n;
+      for (let sd = 0; sd < 2; sd++) {
+        const lat = sd ? halfW : -halfW;
+        const vtx = k * 2 + sd;
+        pos[vtx * 3] = this.px[i] + this.rx[i] * lat;
+        pos[vtx * 3 + 1] = this.py[i] + 0.02;
+        pos[vtx * 3 + 2] = this.pz[i] + this.rz[i] * lat;
+        a1.set([lat, k * this.step, kerbL[i], kerbR[i]], vtx * 4);
+        a2.set([wear[i], 0], vtx * 2);
+      }
+      if (k < n) idx.set([k * 2, k * 2 + 1, k * 2 + 2, k * 2 + 1, k * 2 + 3, k * 2 + 2], k * 6);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aRoad', new THREE.BufferAttribute(a1, 4));
+    g.setAttribute('aRoad2', new THREE.BufferAttribute(a2, 2));
+    g.setIndex(new THREE.BufferAttribute(idx, 1));
+    g.computeVertexNormals();
+    return g;
+  }
+
+  /** Smoothed curvature-driven data for visuals: kerbs on corners, racing-line wear, corner list. Cached. */
+  visualProfile() {
+    if (this._vis) return this._vis;
+    const n = this.n;
+    const smooth = (src, R) => {
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        let s = 0;
+        for (let k = -R; k <= R; k++) s += src[this.wrap(i + k)];
+        out[i] = s / (2 * R + 1);
+      }
+      return out;
+    };
+    const cs = smooth(this.curv, 4);
+    const cw = smooth(this.curv, 14);
+    const inL = new Float32Array(n), inR = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const c = cs[i];
+      if (Math.abs(c) > 0.0105) {
+        // inside of a right turn (c > 0) is the +lateral side; the exit-side outer kerb only on sharp bends
+        if (c > 0) { inR[i] = 1; if (c > 0.017) inL[i] = 1; } else { inL[i] = 1; if (c < -0.017) inR[i] = 1; }
+      }
+    }
+    const dilate = (src, R) => {
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        let m = 0;
+        for (let k = -R; k <= R && !m; k++) m = src[this.wrap(i + k)];
+        out[i] = m;
+      }
+      return out;
+    };
+    const R = Math.round(10 / this.step);
+    const kerbL = dilate(inL, R), kerbR = dilate(inR, R);
+    // keep the start straight clean (grid boxes + checkered band)
+    for (let i = 0; i < n; i++) {
+      const s = i * this.step;
+      if (s < 40 || s > this.length - 60) { kerbL[i] = 0; kerbR[i] = 0; }
+    }
+    const wear = new Float32Array(n);
+    for (let i = 0; i < n; i++) wear[i] = Math.max(-5.5, Math.min(5.5, cw[i] * 420));
+    this._vis = { kerbL, kerbR, wear, curvSmooth: cs };
+    return this._vis;
+  }
+
+  /** Pillars every ~16 m under elevated road sections (aBar attribute so the barrier material can shade them). */
+  pierGeometry() {
+    const every = Math.max(1, Math.round(16 / this.step));
+    const geos = [];
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+    const addBox = (w, h, d, x, y, z, i, s) => {
+      const g = new THREE.BoxGeometry(w, h, d);
+      g.translate(0, h / 2, 0);
+      e.set(0, Math.atan2(this.tx[i], this.tz[i]), 0);
+      g.applyMatrix4(m.compose(v.set(x, y, z), q.setFromEuler(e), one));
+      const n = g.attributes.position.count;
+      const a = new Float32Array(n * 4);
+      for (let k = 0; k < n; k++) a.set([s + 6, 5 + (g.attributes.position.getY(k) - y), 2, 0], k * 4);
+      g.setAttribute('aBar', new THREE.BufferAttribute(a, 4));
+      g.deleteAttribute('uv');
+      geos.push(g);
+    };
+    for (let i = 0; i < this.n; i += every) {
+      const y = this.py[i];
+      if (y < 2.6) continue;
+      const s = i * this.step;
+      for (const side of [-1, 1]) {
+        const lat = side * this.half * 0.55;
+        addBox(1.3, y - 1.2 + 0.6, 1.3, this.px[i] + this.rx[i] * lat, -0.6, this.pz[i] + this.rz[i] * lat, i, s);
+      }
+      addBox(this.width * 0.8, 0.9, 1.5, this.px[i], y - 1.3, this.pz[i], i, s);
+    }
+    if (!geos.length) return null;
+    const merged = mergeGeometries(geos, false);
+    geos.forEach((g) => g.dispose());
+    return merged;
+  }
+
+  /** Barrier profile swept along the track: inner face, top cap, outer skirt to the ground. aBar = (s, v, face, side). */
+  barrierGeometry(wallOff) {
+    const n = this.n;
+    const H = TRACK.WALL_HEIGHT, T = 0.35, GROUND = -1.0;
+    const faces = 3, perSide = faces * (n + 1) * 2;
+    const pos = new Float32Array(perSide * 2 * 3);
+    const bar = new Float32Array(perSide * 2 * 4);
+    const idx = [];
+    let vtx = 0;
+    for (const side of [-1, 1]) {
+      const s01 = side > 0 ? 1 : 0;
+      for (let f = 0; f < faces; f++) {
+        const base = vtx;
+        for (let k = 0; k <= n; k++) {
+          const i = k % n;
+          const s = k * this.step;
+          const y = this.py[i];
+          let A, B; // [lateral, y, v]
+          if (f === 0) { A = [wallOff, y, 0]; B = [wallOff, y + H, H]; }
+          else if (f === 1) { A = [wallOff, y + H, 0]; B = [wallOff + T, y + H, T]; }
+          else {
+            // outer fascia: reaches the ground near ground level, becomes a 2 m viaduct edge when elevated
+            const bot = Math.max(GROUND, y - 2.0);
+            A = [wallOff + T, y + H, 0]; B = [wallOff + T, bot, y + H - bot];
+          }
+          for (const P of [A, B]) {
+            const lat = side * P[0];
+            pos[vtx * 3] = this.px[i] + this.rx[i] * lat;
+            pos[vtx * 3 + 1] = P[1];
+            pos[vtx * 3 + 2] = this.pz[i] + this.rz[i] * lat;
+            bar[vtx * 4] = s; bar[vtx * 4 + 1] = P[2]; bar[vtx * 4 + 2] = f; bar[vtx * 4 + 3] = s01;
+            vtx++;
+          }
+          if (k < n) {
+            const a = base + k * 2, b = a + 1, c = a + 2, d = a + 3;
+            // winding: face 0 normal points at the road, face 1 up, face 2 away from the road
+            if (side > 0) idx.push(a, b, c, b, d, c); else idx.push(a, c, b, b, c, d);
+          }
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aBar', new THREE.BufferAttribute(bar, 4));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
   }
 
   /** Flat ribbon across the road. fn(i, side) -> [lateral, yOffset]. */
