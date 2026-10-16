@@ -156,7 +156,7 @@ const FRAG = /* glsl */`
 `;
 
 export function buildSky(theme, qp, sunDir) {
-  const defines = { OCT: qp.q === 'low' ? 2 : 4 };
+  const defines = { OCT: qp.q === 'low' || qp.mobile ? 2 : 4 };
   if (theme.stars) defines.STARS = 1;
   if (theme.sun) { defines.SUN = 1; if (theme.smoke) defines.SUN_HAZY = 1; }
   if (theme.moon) defines.MOON = 1;

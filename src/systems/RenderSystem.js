@@ -110,6 +110,12 @@ export class RenderSystem {
   setQuality(q) {
     this.quality = q;
     this.scale = 1;
+    // MSAA is expensive on phone GPUs: 4x on desktop "high", 2x on desktop "medium", off on touch devices and "low"
+    const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+    const samples = touch || q === 'low' ? 0 : q === 'high' ? 4 : 2;
+    for (const t of [this.composer.renderTarget1, this.composer.renderTarget2]) {
+      if (t.samples !== samples) { t.samples = samples; t.dispose(); }
+    }
     this.resize();
   }
 

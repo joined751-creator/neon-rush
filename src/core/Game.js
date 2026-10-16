@@ -261,7 +261,7 @@ export class Game {
     const fps = pf.frames / pf.acc;
     pf.acc = 0; pf.frames = 0;
     const sc = this.render.scale ?? 1;
-    if (fps < 42 && sc > 0.55) { this.render.setScale(sc - 0.15); pf.good = 0; }
+    if (fps < 50 && sc > 0.55) { this.render.setScale(sc - (fps < 40 ? 0.15 : 0.1)); pf.good = 0; }
     else if (fps > 57) { pf.good++; if (pf.good >= 3 && sc < 1) { this.render.setScale(sc + 0.1); pf.good = 0; } }
     else pf.good = 0;
   }
