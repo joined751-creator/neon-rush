@@ -2,11 +2,27 @@ import { eventBus, Events } from '../core/EventBus.js';
 import { MODES, DIFFICULTY, CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { TRACKS } from '../level/TrackDefs.js';
 import { Track } from '../level/Track.js';
+import { MODE_ICONS, UI_ICONS } from './Icons.js';
+import { runSplash } from './Splash.js';
+import { drawTrackThumb, accentFor } from './TrackThumbs.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const fmt = (t) => (t == null ? '—' : `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`);
 const hexCss = (n) => '#' + n.toString(16).padStart(6, '0');
+const CAR_META = {
+  comet: { cls: 'A', tag: 'Гран-туризмо' },
+  viper: { cls: 'S', tag: 'Гиперкар' },
+  titan: { cls: 'B', tag: 'Маслкар V8' },
+  spark: { cls: 'B', tag: 'Хот-хэтч' },
+};
+const MEDAL = ['gold', 'silver', 'bronze'];
+const segBar = (v) => {
+  const n = Math.round(Math.max(0, Math.min(1, v)) * 10);
+  let h = '';
+  for (let i = 0; i < 10; i++) h += `<i class="${i < n ? 'f' : ''}"></i>`;
+  return h;
+};
 
 /** DOM menus: title, setup, garage, controls, settings, pause, results. */
 export class Menus {
@@ -14,7 +30,10 @@ export class Menus {
     this.gs = gameState;
     this.current = 'title';
     this.back = 'title';
-    this.trackOutlines = TRACKS.map((def) => new Track(def).outline(160));
+    const tracks = TRACKS.map((def) => new Track(def));
+    this.trackOutlines = tracks.map((t) => t.outline(160));
+    this.trackLengths = tracks.map((t) => t.length);
+    runSplash();
 
     document.addEventListener('click', (e) => {
       const b = e.target.closest('[data-action]');
@@ -103,8 +122,8 @@ export class Menus {
     modeBox.innerHTML = '';
     for (const m of MODES) {
       const c = document.createElement('button');
-      c.className = 'card' + (s.mode === m.id ? ' on' : '');
-      c.innerHTML = `<span class="card-t">${m.name}</span><span class="card-d">${m.desc}</span>`;
+      c.className = 'card mode-card' + (s.mode === m.id ? ' on' : '');
+      c.innerHTML = `<span class="card-ico">${MODE_ICONS[m.id] || ''}</span><span class="card-t">${m.name}</span><span class="card-d">${m.desc}</span>`;
       c.onclick = () => { s.mode = m.id; eventBus.emit(Events.UI_CLICK); this.renderSetup(); };
       modeBox.appendChild(c);
     }
@@ -112,13 +131,20 @@ export class Menus {
     trackBox.innerHTML = '';
     TRACKS.forEach((t, i) => {
       const c = document.createElement('button');
-      c.className = 'card' + (s.mode === 'gp' ? ' on gp' : s.track === i ? ' on' : '');
+      const on = s.mode === 'gp' || s.track === i;
+      c.className = 'card track-card' + (s.mode === 'gp' ? ' on gp' : s.track === i ? ' on' : '');
+      const acc = accentFor(t.theme);
+      c.style.setProperty('--acc', acc.a);
+      c.style.setProperty('--acc2', acc.b);
       const rec = this.gs.records[`${i}${s.mirror ? 'm' : ''}`];
-      c.innerHTML = `<canvas width="240" height="100"></canvas><span class="card-t">${t.name}</span><span class="card-d">${t.desc}</span><span class="rec">${rec?.bestLap ? 'Рекорд круга ' + fmt(rec.bestLap) : '&nbsp;'}</span>`;
+      const km = (this.trackLengths[i] / 1000).toFixed(1).replace('.', ',');
+      c.innerHTML = `<span class="tc-top"><span class="tc-n">${String(i + 1).padStart(2, '0')}</span><span class="tc-theme">${acc.label}</span><span class="tc-len">${km} км</span></span>
+        <canvas width="240" height="96"></canvas><span class="card-t">${t.name}</span><span class="card-d">${t.desc}</span>
+        <span class="rec${rec?.bestLap ? '' : ' none'}">${rec?.bestLap ? UI_ICONS.star + 'Рекорд ' + fmt(rec.bestLap) : 'Рекорда нет'}</span>`;
       c.onclick = () => { if (s.mode === 'gp') return; s.track = i; eventBus.emit(Events.UI_CLICK); this.renderSetup(); };
       if (s.mode === 'gp') c.querySelector('.card-t').insertAdjacentHTML('afterbegin', `<span class="stage">ЭТАП ${i + 1}</span>`);
       trackBox.appendChild(c);
-      this.drawOutline($('canvas', c), this.trackOutlines[i], s.mode === 'gp' || s.track === i, s.mirror && s.mode !== 'gp');
+      drawTrackThumb($('canvas', c), this.trackOutlines[i], acc, on, s.mirror && s.mode !== 'gp');
     });
     this.seg('#opt-players', [[1, '1 игрок'], [2, '2 игрока']], s.players, (v) => { s.players = v; });
     this.stepper('#opt-laps', s.laps, 1, 7, (v) => { s.laps = v; }, s.mode === 'elim');
@@ -154,35 +180,6 @@ export class Menus {
     plus.onclick = () => { set(Math.min(max, value + 1)); eventBus.emit(Events.UI_CLICK); this.renderSetup(); };
   }
 
-  drawOutline(cv, o, on, mirror) {
-    const g = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
-    g.clearRect(0, 0, W, H);
-    const sx = (W - 20) / (o.maxX - o.minX), sz = (H - 16) / (o.maxZ - o.minZ);
-    const k = Math.min(sx, sz);
-    const ox = (W - (o.maxX - o.minX) * k) / 2, oz = (H - (o.maxZ - o.minZ) * k) / 2;
-    const P = ([x, z]) => [ox + (o.maxX - x) * k, oz + (o.maxZ - z) * k];
-    g.lineJoin = 'round';
-    g.beginPath();
-    o.pts.forEach((p, i) => { const [x, y] = P(p); i ? g.lineTo(x, y) : g.moveTo(x, y); });
-    g.closePath();
-    g.strokeStyle = on ? '#00e5ff' : 'rgba(255,255,255,0.45)';
-    g.lineWidth = 4;
-    g.shadowColor = on ? '#00e5ff' : 'transparent';
-    g.shadowBlur = 10;
-    g.stroke();
-    const [sx0, sy0] = P(o.pts[0]);
-    const [sx1, sy1] = P(o.pts[mirror ? o.pts.length - 3 : 3]);
-    g.shadowBlur = 0;
-    g.fillStyle = '#ff2bd6';
-    g.beginPath(); g.arc(sx0, sy0, 5, 0, Math.PI * 2); g.fill();
-    // direction arrow
-    const a = Math.atan2(sy1 - sy0, sx1 - sx0);
-    g.save(); g.translate(sx0, sy0); g.rotate(a);
-    g.beginPath(); g.moveTo(16, 0); g.lineTo(9, -5); g.lineTo(9, 5); g.closePath(); g.fill();
-    g.restore();
-  }
-
   // ---------------------------------------------------------------- garage
   renderGarage() {
     const box = $('#garage-players');
@@ -203,18 +200,27 @@ export class Menus {
     const g = this.gs.garage[p];
     const t = CAR_TYPES[g.type];
     const other = this.gs.settings.players > 1 ? this.gs.garage[1 - p].color : -1;
-    const keys = `<span class="kbd-only">${p === 0 ? '<kbd>A</kbd><kbd>D</kbd> машина · <kbd>W</kbd><kbd>S</kbd> цвет' : '<kbd>←</kbd><kbd>→</kbd> машина · <kbd>↑</kbd><kbd>↓</kbd> цвет'}</span>`;
+    const meta = CAR_META[t.id] || { cls: 'A', tag: '' };
+    const col = hexCss(CAR_COLORS[g.color].hex);
+    el.style.setProperty('--pc', col);
+    const keys = `<span class="kbd-only">${p === 0 ? '<kbd>A</kbd><kbd>D</kbd> машина <kbd>W</kbd><kbd>S</kbd> цвет' : '<kbd>←</kbd><kbd>→</kbd> машина <kbd>↑</kbd><kbd>↓</kbd> цвет'}</span>`;
+    const stat = (label, v) => `<span class="st-l">${label}</span><span class="segbar">${segBar(v)}</span><b class="st-v">${Math.round(v * 100)}</b>`;
     el.innerHTML = `
-      <div class="gp-head"><span class="gp-tag" style="color:${hexCss(CAR_COLORS[g.color].hex)}">ИГРОК ${p + 1}</span><span class="gp-keys">${keys}</span></div>
-      <div class="gp-car"><button data-d="-1" aria-label="Предыдущая">◀</button><div class="gp-name">${t.name}</div><button data-d="1" aria-label="Следующая">▶</button></div>
+      <div class="gp-head"><span class="gp-tag"><i></i>Игрок ${p + 1}</span><span class="gp-keys">${keys}</span></div>
+      <div class="gp-car">
+        <button data-d="-1" aria-label="Предыдущая">${UI_ICONS.chevL}</button>
+        <div class="gp-id">
+          <span class="gp-meta"><b class="gp-cls">${meta.cls}</b><span>${meta.tag}</span><span class="gp-idx">${String(g.type + 1).padStart(2, '0')} / ${String(CAR_TYPES.length).padStart(2, '0')}</span></span>
+          <div class="gp-name">${t.name}</div>
+        </div>
+        <button data-d="1" aria-label="Следующая">${UI_ICONS.chevR}</button>
+      </div>
       <div class="gp-desc">${t.desc}</div>
       <div class="stats">
-        <span>Скорость</span><div class="bar"><i style="width:${t.speed * 100}%"></i></div>
-        <span>Разгон</span><div class="bar"><i style="width:${t.accel * 100}%"></i></div>
-        <span>Управление</span><div class="bar"><i style="width:${t.handling * 100}%"></i></div>
-        <span>Масса</span><div class="bar"><i style="width:${(t.weight / 1.5) * 100}%"></i></div>
+        ${stat('Скорость', t.speed)}${stat('Разгон', t.accel)}${stat('Управление', t.handling)}${stat('Масса', t.weight / 1.5)}
       </div>
-      <div class="swatches">${CAR_COLORS.map((c, i) => `<button class="sw${i === g.color ? ' on' : ''}${i === other ? ' taken' : ''}" data-c="${i}" title="${c.name}" style="background:${hexCss(c.hex)};color:${hexCss(c.hex)}"></button>`).join('')}</div>`;
+      <div class="gp-colhead"><span>Цвет</span><b>${CAR_COLORS[g.color].name}</b></div>
+      <div class="swatches">${CAR_COLORS.map((c, i) => `<button class="sw${i === g.color ? ' on' : ''}${i === other ? ' taken' : ''}" data-c="${i}" title="${c.name}" aria-label="${c.name}" style="--sw:${hexCss(c.hex)}"></button>`).join('')}</div>`;
     $$('.gp-car button', el).forEach((b) => { b.onclick = () => this.changeCar(p, +b.dataset.d); });
     $$('.sw', el).forEach((b) => { b.onclick = () => this.setColor(p, +b.dataset.c); });
   }
@@ -300,29 +306,53 @@ export class Menus {
   // ---------------------------------------------------------------- results
   showResults(res, humans, gp = null) {
     const me = res.rows.find((r) => r.human && r.player === 0);
-    let title = res.mode === 'trial' ? 'Заезд на время' : me ? (me.place === 1 ? 'Победа!' : `${me.place} место`) : 'Финиш';
-    if (gp?.last) title = gp.standings[0].human ? 'Чемпион!' : `Чемпион: ${gp.standings[0].name}`;
-    $('#results-title').textContent = title;
-    $('#results-sub').innerHTML = `${res.track}${res.mirror ? ' · обратное' : ''}${res.record ? '<span class="rec-badge">НОВЫЙ РЕКОРД</span>' : ''}`;
     const isElim = res.mode === 'elim';
-    const rows = res.rows.map((r) => `
-      <tr class="${r.human ? 'me' : ''}">
-        <td class="pl">${r.place}</td>
-        <td><span class="dot" style="color:${hexCss(r.color)}"></span>${r.name}${r.human && humans > 1 ? ` <span class="muted">P${r.player + 1}</span>` : ''}</td>
-        <td class="muted">${r.car}</td>
-        <td class="t">${isElim ? (r.eliminated ? '<span class="muted">выбыл</span>' : 'выжил') : (r.time ? fmt(r.time) + (r.estimated ? ' <span class="muted">≈</span>' : '') : '—')}</td>
-        <td class="t muted">${r.best ? fmt(r.best) : '—'}</td>
+    const win = me && me.place === 1 && res.mode !== 'trial';
+    let title = res.mode === 'trial' ? 'Заезд на время' : me ? (me.place === 1 ? 'Победа!' : `${me.place}-е место`) : 'Финиш';
+    let kicker = res.mode === 'trial' ? 'Тренировка' : isElim ? 'Выбывание · итог' : 'Финиш';
+    if (gp?.last) { title = gp.standings[0].human ? 'Чемпион!' : `Чемпион: ${gp.standings[0].name}`; kicker = 'Гран-при завершён'; }
+    else if (gp) kicker = `Гран-при · этап ${gp.round}/${gp.total}`;
+    const scr = $('#screen-results');
+    scr.classList.toggle('win', !!(win || (gp?.last && gp.standings[0].human)));
+    scr.classList.toggle('has-gp', !!gp);
+    $('#results-kicker').textContent = kicker;
+    $('#results-title').textContent = title;
+    const recBadge = res.record ? `<span class="rec-badge">${UI_ICONS.star}Новый рекорд</span>` : '';
+    $('#results-sub').innerHTML = `${res.track}${res.mirror ? ' · обратное' : ''}${recBadge}`;
+    const bestAll = Math.min(...res.rows.map((r) => r.best ?? Infinity));
+    // hero: player's place + times
+    const hero = $('#results-hero');
+    if (me) {
+      const medal = me.place <= 3 && res.mode !== 'trial' ? MEDAL[me.place - 1] : '';
+      hero.hidden = false;
+      hero.className = 'res-hero ' + medal;
+      hero.innerHTML = `
+        <span class="rh-l">${res.mode === 'trial' ? 'Лучший круг' : 'Твоё место'}</span>
+        ${res.mode === 'trial' ? `<span class="rh-time">${fmt(me.best)}</span>` : `<span class="rh-place"><b>${me.place}</b><small>/${res.rows.length}</small></span>`}
+        <div class="rh-stats">
+          ${res.mode !== 'trial' ? `<div><span>${isElim ? 'Итог' : 'Время'}</span><b>${isElim ? (me.eliminated ? 'выбыл' : 'выжил') : me.time ? fmt(me.time) : '—'}</b></div>` : ''}
+          <div><span>Лучший круг</span><b>${fmt(me.best)}</b></div>
+          <div><span>Машина</span><b>${me.car}</b></div>
+        </div>`;
+    } else hero.hidden = true;
+    const rows = res.rows.map((r, i) => `
+      <tr class="${r.human ? 'me' : ''} ${r.place <= 3 && res.mode !== 'trial' ? 'pod ' + MEDAL[r.place - 1] : ''}" style="--i:${i}">
+        <td class="pl"><span>${r.place}</span></td>
+        <td class="nm"><span class="dot" style="color:${hexCss(r.color)}"></span>${r.name}${r.human && humans > 1 ? ` <span class="muted">P${r.player + 1}</span>` : ''}</td>
+        <td class="muted car">${r.car}</td>
+        <td class="t">${isElim ? (r.eliminated ? '<span class="muted">выбыл</span>' : '<span class="ok">выжил</span>') : (r.time ? fmt(r.time) + (r.estimated ? ' <span class="muted">≈</span>' : '') : '—')}</td>
+        <td class="t bl${r.best != null && r.best === bestAll ? ' fastest' : ''}">${r.best ? fmt(r.best) : '—'}</td>
       </tr>`).join('');
-    $('#results-table').innerHTML = `<thead><tr><th>#</th><th>Пилот</th><th>Машина</th><th>${isElim ? 'Итог' : 'Время'}</th><th>Лучший круг</th></tr></thead><tbody>${rows}</tbody>`;
+    $('#results-table').innerHTML = `<thead><tr><th>#</th><th>Пилот</th><th class="car">Машина</th><th>${isElim ? 'Итог' : 'Время'}</th><th>Лучший круг</th></tr></thead><tbody>${rows}</tbody>`;
     const gpBox = $('#results-gp');
     const primary = $('#screen-results .btn.primary');
     const secondary = $('#results-retry');
     if (gp) {
-      $('#results-sub').innerHTML = `Гран-при · этап ${gp.round}/${gp.total} · ${res.track}${res.record ? '<span class="rec-badge">НОВЫЙ РЕКОРД</span>' : ''}`;
+      $('#results-sub').innerHTML = `${res.track}${recBadge}`;
       gpBox.hidden = false;
-      gpBox.innerHTML = `<h3>Зачёт чемпионата</h3><table class="standings">${gp.standings.map((r, i) => `
-        <tr class="${r.human ? 'me' : ''}"><td class="pl">${i + 1}</td><td><span class="dot" style="color:${hexCss(r.color ?? 0xffffff)}"></span>${r.name}</td>
-        <td class="t">${r.pts}</td><td class="t gain">+${r.gained}</td></tr>`).join('')}</table>`;
+      gpBox.innerHTML = `<h3>Зачёт чемпионата <span>${gp.round}/${gp.total}</span></h3><table class="standings">${gp.standings.map((r, i) => `
+        <tr class="${r.human ? 'me' : ''} ${i < 3 ? 'pod ' + MEDAL[i] : ''}" style="--i:${i + 2}"><td class="pl"><span>${i + 1}</span></td><td class="nm"><span class="dot" style="color:${hexCss(r.color ?? 0xffffff)}"></span>${r.name}</td>
+        <td class="t pts">${r.pts}</td><td class="t gain">+${r.gained}</td></tr>`).join('')}</table>`;
       primary.dataset.action = 'nextRound';
       primary.textContent = gp.last ? 'Новый чемпионат' : `Этап ${gp.round + 1}/${gp.total} →`;
       secondary.hidden = gp.last;
