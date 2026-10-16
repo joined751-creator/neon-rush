@@ -153,7 +153,7 @@ export class HUD {
       pane.el.classList.toggle('sz-tiny', tiny);
       pane.el.classList.toggle('sz-narrow', w < 700);
       pane.towerMax = h < 560 || n > 1 ? 5 : 8;
-      pane.towerOn = this.race.cars.length > 1 && h >= 400 && !(touch && w < 640) && !(touch && n > 1);
+      pane.towerOn = this.race.cars.length > 1 && h >= 400 && !touch;
       pane.tower.hidden = !pane.towerOn;
       pane.rows = [];
       pane.towerRows.innerHTML = '';
