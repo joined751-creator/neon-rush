@@ -35,36 +35,42 @@
 
   <!-- TITLE -->
   <section id="screen-title" class="screen">
+    <div class="title-fx" aria-hidden="true"><i class="tf-grad"></i><i class="tf-scan"></i><i class="tf-streak"></i></div>
     <div class="title-col">
+      <div class="eyebrow-line"><span class="dot-live"></span>Аркадные неоновые гонки</div>
       <div class="logo" aria-label="Neon Rush">
-        <span class="logo-a">NEON</span>
-        <span class="logo-b">RUSH</span>
+        <span class="logo-a" data-t="NEON">NEON</span>
+        <span class="logo-b" data-t="RUSH">RUSH</span>
+        <span class="logo-rule"><i></i><b>v3.0</b></span>
       </div>
-      <p class="tagline">Аркадные неоновые гонки. Дрифт-турбо, нитро, ракеты и сплит-скрин на двоих — на компьютере, планшете и телефоне.</p>
+      <p class="tagline">Дрифт-турбо, нитро, ракеты и сплит-скрин на двоих — на компьютере, планшете и телефоне.</p>
       <nav class="menu" id="title-menu">
-        <button class="mbtn" data-action="play"><span class="mbtn-k">01</span>Заезд</button>
-        <button class="mbtn" data-action="quick2"><span class="mbtn-k">02</span>Быстрая дуэль на двоих</button>
-        <button class="mbtn" data-action="controls"><span class="mbtn-k">03</span>Управление</button>
-        <button class="mbtn" data-action="settings"><span class="mbtn-k">04</span>Настройки</button>
-        <button class="mbtn mbtn-install" id="install-btn" data-action="install" hidden><span class="mbtn-k">05</span>Установить на телефон</button>
+        <button class="mbtn" data-action="play" style="--i:0"><span class="mbtn-k">01</span><span class="mbtn-t">Заезд<small>Режим, трасса и соперники</small></span><i class="mbtn-go"></i></button>
+        <button class="mbtn" data-action="quick2" style="--i:1"><span class="mbtn-k">02</span><span class="mbtn-t">Быстрая дуэль на двоих<small>Сплит-скрин на одном экране</small></span><i class="mbtn-go"></i></button>
+        <button class="mbtn" data-action="controls" style="--i:2"><span class="mbtn-k">03</span><span class="mbtn-t">Управление<small>Клавиатура, геймпад, сенсор</small></span><i class="mbtn-go"></i></button>
+        <button class="mbtn" data-action="settings" style="--i:3"><span class="mbtn-k">04</span><span class="mbtn-t">Настройки<small>Графика, звук, сплит-скрин</small></span><i class="mbtn-go"></i></button>
+        <button class="mbtn mbtn-install" id="install-btn" data-action="install" style="--i:4" hidden><span class="mbtn-k">05</span><span class="mbtn-t">Установить на телефон<small>Играй без браузера и офлайн</small></span><i class="mbtn-go"></i></button>
       </nav>
-      <p class="hint kbd-only">Enter — выбрать · ↑↓ — навигация</p>
-      <p class="hint touch-only">Лучше всего — в горизонтальном положении телефона</p>
     </div>
     <div class="title-badge">
-      <div class="badge-row"><b>4</b> трассы</div>
-      <div class="badge-row"><b>4</b> машины</div>
-      <div class="badge-row"><b>4</b> режима</div>
-      <div class="badge-row"><b>2</b> игрока</div>
+      <div class="badge-row"><b>4</b><span>трассы</span></div>
+      <div class="badge-row"><b>4</b><span>машины</span></div>
+      <div class="badge-row"><b>4</b><span>режима</span></div>
+      <div class="badge-row"><b>2</b><span>игрока</span></div>
     </div>
+    <footer class="title-bar">
+      <span class="hint kbd-only"><kbd>↑</kbd><kbd>↓</kbd> навигация <kbd>Enter</kbd> выбрать <kbd>M</kbd> звук</span>
+      <span class="hint touch-only">Лучше всего — в горизонтальном положении телефона</span>
+      <span class="tb-ver">NEON RUSH <b>v3.0</b></span>
+    </footer>
   </section>
 
   <!-- SETUP -->
   <section id="screen-setup" class="screen" hidden>
     <div class="panel setup-panel">
       <header class="panel-head">
-        <h2>Настройка заезда</h2>
-        <span class="eyebrow" id="setup-summary"></span>
+        <div class="ph-t"><span class="kicker">Шаг 1 / 2 · Подготовка</span><h2>Настройка заезда</h2></div>
+        <span class="eyebrow summary" id="setup-summary"></span>
       </header>
       <div class="setup-grid">
         <div class="field field-wide">
@@ -110,7 +116,7 @@
   <!-- GARAGE -->
   <section id="screen-garage" class="screen" hidden>
     <div class="garage-head">
-      <h2>Гараж</h2>
+      <div class="ph-t"><span class="kicker">Шаг 2 / 2 · Гараж</span><h2>Гараж</h2></div>
       <span class="eyebrow">Выбери машину и цвет<span class="touch-only"> · листай машины свайпом</span></span>
     </div>
     <div class="garage-players" id="garage-players"></div>
@@ -123,7 +129,7 @@
   <!-- CONTROLS -->
   <section id="screen-controls" class="screen" hidden>
     <div class="panel narrow">
-      <header class="panel-head"><h2>Управление</h2></header>
+      <header class="panel-head"><div class="ph-t"><span class="kicker">Справка</span><h2>Управление</h2></div></header>
       <div class="touch-help touch-only">
         <div class="tip"><b>Джойстик слева</b> стоит на месте. Держи палец — газ, влево-вправо — руль, потяни вниз — тормоз и задний ход, отпусти — накат.</div>
         <div class="tip"><b>Справа только главное:</b> <b>ДРИФТ</b> — держи в повороте и отпусти на выходе ради турбо; <b>НИТРО</b> — кольцо показывает заряд; кнопка <b>бонуса</b> появляется, только когда он подобран. Камера — значок вверху.</div>
@@ -158,7 +164,7 @@
   <!-- SETTINGS -->
   <section id="screen-settings" class="screen" hidden>
     <div class="panel narrow">
-      <header class="panel-head"><h2>Настройки</h2></header>
+      <header class="panel-head"><div class="ph-t"><span class="kicker">Система</span><h2>Настройки</h2></div></header>
       <div class="setup-grid">
         <div class="field"><label class="flabel">Графика</label><div class="seg" id="opt-quality"></div></div>
         <div class="field"><label class="flabel">Сплит-скрин</label><div class="seg" id="opt-split"></div></div>
@@ -175,7 +181,7 @@
   <!-- INSTALL (iOS instructions) -->
   <section id="screen-install" class="screen" hidden>
     <div class="panel narrow">
-      <header class="panel-head"><h2>Игра на экране «Домой»</h2></header>
+      <header class="panel-head"><div class="ph-t"><span class="kicker">iPhone · iPad</span><h2>Игра на экране «Домой»</h2></div></header>
       <ol class="steps">
         <li>Открой игру в <b>Safari</b>.</li>
         <li>Нажми кнопку <b>«Поделиться»</b> <span class="share-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span> внизу экрана.</li>
@@ -189,23 +195,26 @@
   <!-- PAUSE -->
   <section id="screen-pause" class="screen dim" hidden>
     <div class="panel narrow center-panel">
+      <span class="kicker">Гонка приостановлена</span>
       <h2>Пауза</h2>
       <nav class="menu">
-        <button class="mbtn" data-action="resume">Продолжить</button>
-        <button class="mbtn" data-action="restart">Перезапуск</button>
-        <button class="mbtn" data-action="quit">В главное меню</button>
+        <button class="mbtn" data-action="resume" style="--i:0"><span class="mbtn-t">Продолжить</span><i class="mbtn-go"></i></button>
+        <button class="mbtn" data-action="restart" style="--i:1"><span class="mbtn-t">Перезапуск</span><i class="mbtn-go"></i></button>
+        <button class="mbtn" data-action="quit" style="--i:2"><span class="mbtn-t">В главное меню</span><i class="mbtn-go"></i></button>
       </nav>
+      <p class="hint kbd-only"><kbd>Esc</kbd> продолжить</p>
     </div>
   </section>
 
   <!-- RESULTS -->
   <section id="screen-results" class="screen dim" hidden>
     <div class="panel results-panel">
-      <header class="panel-head">
-        <h2 id="results-title">Финиш</h2>
+      <header class="panel-head results-head">
+        <div class="ph-t"><span class="kicker" id="results-kicker">Финиш</span><h2 id="results-title">Финиш</h2></div>
         <span class="eyebrow" id="results-sub"></span>
       </header>
       <div class="results-body">
+        <div class="res-hero" id="results-hero"></div>
         <div class="table-wrap"><table class="standings" id="results-table"></table></div>
         <div class="gp-box" id="results-gp" hidden></div>
       </div>
@@ -233,6 +242,11 @@
   <button id="mute" class="icon-btn" aria-label="Звук">♪</button>
   <button id="pause-btn" class="icon-btn" aria-label="Пауза" hidden>II</button>
   <div id="flash"></div>
+  <div id="splash" aria-hidden="true">
+    <div class="sp-lines"><i></i><i></i><i></i></div>
+    <div class="sp-logo"><span class="sp-a">NEON</span><span class="sp-b">RUSH</span></div>
+    <div class="sp-sub">v3.0</div>
+  </div>
 </div>
 <script type="module" src="src/main.js"></script>
 </body>

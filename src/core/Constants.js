@@ -166,30 +166,73 @@ export const CAMERA = {
   SHAKE_DECAY: 6,
 };
 
+// World themes. Visual-only fields: asphalt/lamp/kerb colours, wet/frost road, sky features, signage
+// (6 boards: index 5 is the start-gantry banner; 3 vertical strips) — all brands are fictional.
+const NEON_RUSH_SIGN = { title: 'NEON RUSH', sub: 'СТАРТ · ФИНИШ · ГРАН-ПРИ 2084', c1: '#ff2bd6', c2: '#00e5ff', icon: 'flag' };
 export const THEMES = {
   sunset: {
     skyTop: 0x0a0322, skyMid: 0x3b0a5c, skyHorizon: 0xff3d7f, fog: 0x3a0d4a,
     fogNear: 90, fogFar: 1100, ground: 0x12041e, grid: 0xff2bd6, sun: true, sunColor1: 0xffe14d, sunColor2: 0xff2b8a,
     roadLine: 0x00f0ff, wall: 0xff2bd6, wall2: 0x00f0ff, hemiSky: 0x9a6bff, hemiGround: 0x2a0630, dirColor: 0xffb0d0,
     props: 'palms', particles: null, stars: true, exposure: 1.05,
+    asphalt: 0x1c1626, lamp: 0xff8fd8, kerbA: 0xff2bd6, kerbB: 0xeee6ff, barrierMetal: 0x2e2640, mountains: 'grid',
+    signs: [
+      { title: 'VOLT', sub: 'ЭНЕРГИЯ НОЧНОЙ ТРАССЫ', c1: '#00e5ff', c2: '#ffe14d', icon: 'bolt' },
+      { title: 'ЗАКАТ 84', sub: 'РЕТРО-МОТЕЛЬ · 24/7', c1: '#ff2b8a', c2: '#ffb347', icon: 'sun' },
+      { title: 'TURBO FM', sub: '104.8 · СИНТВЕЙВ НОН-СТОП', c1: '#b04dff', c2: '#00e5ff', icon: 'wave' },
+      { title: 'КИБЕР КОЛА', sub: 'ОХЛАЖДАЕТ ДО НУЛЯ', c1: '#ff3355', c2: '#ffffff', icon: 'drop' },
+      { title: 'ДРИФТ-КЛУБ', sub: 'КАЖДУЮ ПЯТНИЦУ · ПОЛНОЧЬ', c1: '#ffd400', c2: '#ff2bd6', icon: 'flag' },
+      NEON_RUSH_SIGN,
+    ],
+    strips: ['МОТЕЛЬ', 'ЗАКАТ', 'ДИСКО'],
   },
   city: {
     skyTop: 0x02030c, skyMid: 0x0d0a2a, skyHorizon: 0x3a1a6a, fog: 0x120a28,
     fogNear: 60, fogFar: 750, ground: 0x07060f, grid: 0x00e5ff, sun: false,
     roadLine: 0x00e5ff, wall: 0xff00aa, wall2: 0x00e5ff, hemiSky: 0x5a7bff, hemiGround: 0x150a20, dirColor: 0x9fb8ff,
     props: 'city', particles: 'rain', stars: false, exposure: 1.1,
+    asphalt: 0x15141c, lamp: 0x9fd4ff, kerbA: 0xff1a4a, kerbB: 0xe6e6f0, wet: 1, barrierMetal: 0x262634, moon: true, clouds: true, cityGlow: 0xff3d9a,
+    signs: [
+      { title: 'НЕОН', sub: 'ШИНЫ ДЛЯ МОКРОЙ НОЧИ', c1: '#00e5ff', c2: '#ff2bd6', icon: 'drop' },
+      { title: 'КИБЕР ЛАПША', sub: 'ДОСТАВКА ЗА 84 СЕКУНДЫ', c1: '#ff2bd6', c2: '#ffd400', icon: 'flame' },
+      { title: 'TURBO FM', sub: '104.8 · НОЧНОЙ ЭФИР', c1: '#b04dff', c2: '#00e5ff', icon: 'wave' },
+      { title: 'VOLT', sub: 'ЗАРЯДКА ЗА 5 МИНУТ', c1: '#39ff88', c2: '#00e5ff', icon: 'bolt' },
+      { title: '24/7', sub: 'МАРКЕТ · МЫ НЕ СПИМ', c1: '#ffd400', c2: '#ff3355', icon: null },
+      NEON_RUSH_SIGN,
+    ],
+    strips: ['ОТЕЛЬ', 'БАР 24', 'КИНО'],
   },
   arctic: {
     skyTop: 0x010612, skyMid: 0x062038, skyHorizon: 0x1c6f8a, fog: 0x0b2a40,
     fogNear: 80, fogFar: 950, ground: 0x0a1c2c, grid: 0x7df9ff, sun: false, aurora: true,
     roadLine: 0x7df9ff, wall: 0xb388ff, wall2: 0x7df9ff, hemiSky: 0x9fe8ff, hemiGround: 0x103040, dirColor: 0xd8f4ff,
     props: 'ice', particles: 'snow', stars: true, exposure: 1.05,
+    asphalt: 0x1a2030, lamp: 0xbfeaff, kerbA: 0x2a7dff, kerbB: 0xf0f8ff, frost: 1, barrierMetal: 0x2a3444, moon: true, mountains: 'snow',
+    signs: [
+      { title: 'ПОЛЮС', sub: 'ГОРЯЧИЙ ЧАЙ · 5 КМ', c1: '#7df9ff', c2: '#ffffff', icon: 'flake' },
+      { title: 'ЛЁД-ТЕХ', sub: 'ШИПЫ НОВОГО ПОКОЛЕНИЯ', c1: '#b388ff', c2: '#7df9ff', icon: 'bolt' },
+      { title: 'TURBO FM', sub: '104.8 · СЕВЕРНЫЙ ЭФИР', c1: '#39ff88', c2: '#b388ff', icon: 'wave' },
+      { title: 'СИЯНИЕ', sub: 'ОБСЕРВАТОРИЯ · БАЗА 9', c1: '#39ff88', c2: '#7df9ff', icon: 'sun' },
+      { title: 'VOLT', sub: 'НЕ ЗАМЕРЗАЕТ', c1: '#00e5ff', c2: '#ffe14d', icon: 'bolt' },
+      NEON_RUSH_SIGN,
+    ],
+    strips: ['СЕВЕР', 'БАЗА 9', 'ЛЁД'],
   },
   volcano: {
     skyTop: 0x0a0202, skyMid: 0x2a0604, skyHorizon: 0xb8300a, fog: 0x2a0a04,
     fogNear: 70, fogFar: 900, ground: 0x140504, grid: 0xff5a00, sun: true, sunColor1: 0xffd000, sunColor2: 0xff2a00,
     roadLine: 0xffb000, wall: 0xff4400, wall2: 0xffd000, hemiSky: 0xff9a60, hemiGround: 0x300804, dirColor: 0xffc090,
     props: 'rocks', particles: 'embers', stars: false, exposure: 1.0,
+    asphalt: 0x1c1412, lamp: 0xffa040, kerbA: 0xff4a00, kerbB: 0x201410, barrierMetal: 0x30221e, smoke: true, mountains: 'lava',
+    signs: [
+      { title: 'МАГМА 1000°', sub: 'САМАЯ ГОРЯЧАЯ ТРАССА', c1: '#ff5a00', c2: '#ffd000', icon: 'flame' },
+      { title: 'ЖАРА', sub: 'КЛИМАТ-КОНТРОЛЬ VOLT', c1: '#ffd000', c2: '#ff2a00', icon: 'sun' },
+      { title: 'КИБЕР КОЛА', sub: 'ЛЕДЯНАЯ · ВСЕГДА', c1: '#00e5ff', c2: '#ffffff', icon: 'drop' },
+      { title: 'TURBO FM', sub: '104.8 · ГОРЯЧИЙ ЭФИР', c1: '#ff2bd6', c2: '#ffb000', icon: 'wave' },
+      { title: 'ВУЛКАН', sub: 'ШИНЫ, КОТОРЫЕ НЕ ПЛАВЯТСЯ', c1: '#ff3a00', c2: '#ffd000', icon: 'bolt' },
+      NEON_RUSH_SIGN,
+    ],
+    strips: ['ЛАВА', 'КРАТЕР', 'ЖАРА'],
   },
 };
 
