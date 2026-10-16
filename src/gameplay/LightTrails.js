@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const N = 16; // history points per trail
+const N = 10; // history points per trail
 const VERT = /* glsl */`
   attribute float aFade;
   varying float vFade;
@@ -12,9 +12,21 @@ const FRAG = /* glsl */`
   void main() { gl_FragColor = vec4(uColor, vFade); }
 `;
 
-/** Cleaner look: hide the old fake headlight cones (read as grey wedges on the road) and calm the underglow. */
-function tidyModel(m) {
-  m.body.traverse((o) => { if (o.isMesh && o.geometry?.type === 'ConeGeometry' && o.geometry.parameters.radius > 1) o.visible = false; });
+/**
+ * Cleaner look: hide the old fake headlight cones (grey wedges on the road), calm the underglow and soften the
+ * metallic-flake normal map (with nearest filtering it showed up as black speckles on phone screens).
+ */
+export function tidyModel(m) {
+  m.body.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.geometry?.type === 'ConeGeometry' && o.geometry.parameters.radius > 1) o.visible = false;
+    const mat = o.material;
+    if (mat?.normalMap && !mat.userData.tidy) {
+      mat.userData.tidy = true;
+      mat.normalScale.multiplyScalar(0.3);
+      if (mat.normalMap.magFilter !== THREE.LinearFilter) { mat.normalMap.magFilter = THREE.LinearFilter; mat.normalMap.needsUpdate = true; }
+    }
+  });
   if (m.glow) { m.glow.scale.set(0.78, 0.86, 1); m.glow.material.color.multiplyScalar(0.55); }
 }
 
@@ -25,8 +37,8 @@ function tidyModel(m) {
 export class LightTrails {
   constructor(scene, cars) {
     this.scene = scene;
-    this.items = cars.map((car) => {
-      tidyModel(car.model);
+    cars.forEach((car) => tidyModel(car.model));
+    this.items = cars.filter((car) => !car.human).map((car) => {
       const geo = new THREE.BufferGeometry();
       const pos = new Float32Array(2 * N * 2 * 3); // 2 trails × N points × 2 verts
       const fade = new Float32Array(2 * N * 2);
@@ -76,12 +88,12 @@ export class LightTrails {
         if (push) { const last = h.pop(); last[0] = x; last[1] = y; last[2] = z; h.unshift(last); } else { h[0][0] = x; h[0][1] = y; h[0][2] = z; }
         for (let i = 0; i < N; i++) {
           const k = i / (N - 1);
-          const w = 0.055 * (1 - k * 0.6);
+          const w = 0.045 * (1 - k * 0.6);
           const p = h[i];
           const o = ((t * N + i) * 2) * 3;
           it.pos[o] = p[0]; it.pos[o + 1] = p[1] + w; it.pos[o + 2] = p[2];
           it.pos[o + 3] = p[0]; it.pos[o + 4] = p[1] - w; it.pos[o + 5] = p[2];
-          const f = (1 - k) * (1 - k) * 0.7 * it.strength;
+          const f = (1 - k) * (1 - k) * 0.45 * it.strength;
           it.fade[(t * N + i) * 2] = f; it.fade[(t * N + i) * 2 + 1] = f;
         }
       }

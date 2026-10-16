@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { buildCarModel, disposeCarModel } from '../gameplay/CarModel.js';
 import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { disposeTree } from './Environment.js';
+import { tidyModel } from '../gameplay/LightTrails.js';
 
 /** Showroom scene: turntables with the players' selected cars. */
 export class Garage {
@@ -88,6 +89,8 @@ export class Garage {
     }
     const color = CAR_COLORS[g.color].hex;
     const m = buildCarModel(CAR_TYPES[g.type].id, color, { beams: false });
+    tidyModel(m);
+    if (m.glow) m.glow.visible = false; // the lit turntable already frames the car; the glow plane sparkled on phones
     m.root.position.y = 0.25;
     if (m.shadow) m.shadow.visible = false;
     this.platforms[p].plat.add(m.root);

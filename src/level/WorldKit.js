@@ -5,6 +5,15 @@ import { gameState } from '../core/GameState.js';
 /** Shared helpers for the world builders: quality profile, seeded RNG, noise, geometry batching, glow points. */
 
 export function qualityProfile() {
+  const p = baseProfile();
+  // phones: same look, cheaper shaders (2-octave sky, no road bump, fewer particles / spectators)
+  if (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) {
+    Object.assign(p, { mobile: true, bump: false, clouds: false, weather: p.weather * 0.6, density: p.density * 0.8, crowd: p.crowd * 0.6, ringSeg: Math.round(p.ringSeg * 0.75) });
+  }
+  return p;
+}
+
+function baseProfile() {
   const q = gameState.settings?.quality || 'medium';
   if (q === 'low') return { q, density: 0.4, rings: 2, ringSeg: 180, crowd: 0.35, bump: false, atlas: 1024, weather: 0.4, clouds: false, poleGap: 64 };
   if (q === 'high') return { q, density: 1, rings: 3, ringSeg: 320, crowd: 1, bump: true, atlas: 2048, weather: 1, clouds: true, poleGap: 40 };
