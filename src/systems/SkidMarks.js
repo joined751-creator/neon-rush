@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
-/** Neon drift trails: ring buffer of quads drawn in a single mesh. */
+/** Neon drift trails: ring buffer of quads drawn in a single mesh. Disabled: marks on the road looked messy. */
+const ENABLED = false;
 export class SkidMarks {
   constructor(scene, maxQuads = 3000) {
     this.max = maxQuads;
@@ -19,13 +20,14 @@ export class SkidMarks {
     }));
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2;
-    scene.add(this.mesh);
+    if (ENABLED) scene.add(this.mesh);
     this._c = new THREE.Color();
     this.dirty = false;
   }
 
   /** Adds a quad from (x0,y0,z0) to (x1,y1,z1). */
   add(x0, y0, z0, x1, y1, z1, color, intensity = 0.35, width = 0.32) {
+    if (!ENABLED) return;
     const dx = x1 - x0, dz = z1 - z0;
     const len = Math.hypot(dx, dz);
     if (len < 0.05 || len > 6) return;
