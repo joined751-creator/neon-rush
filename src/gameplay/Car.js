@@ -160,7 +160,7 @@ export class Car {
       const speedFactor = Math.min(1, Math.abs(vF) / 9) * (1 - 0.28 * Math.min(1, Math.abs(vF) / top));
       if (this.drifting) {
         const tight = this.driftDir * steer; // -1..1
-        const amount = CAR.DRIFT_YAW_MIN + (1 - CAR.DRIFT_YAW_MIN) * (tight + 1) / 2; // 0.15..1
+        const amount = CAR.DRIFT_YAW_BIAS + CAR.DRIFT_YAW_GAIN * tight; // -0.4..1: the stick steers the slide
         yawRate = this.driftDir * CAR.TURN_RATE * CAR.DRIFT_TURN * handling * amount * speedFactor;
         vF -= vF * CAR.DRIFT_DRAG * dt;
         this.driftTime += dt * (0.75 + 0.5 * Math.max(0, tight));
@@ -177,6 +177,7 @@ export class Car {
       let grip = this.drifting ? CAR.DRIFT_GRIP : CAR.GRIP * (0.75 + 0.45 * this.type.handling);
       if (this.spinTime > 0) grip = 0.9;
       vR *= Math.exp(-grip * dt);
+      if (this.drifting && this.human) [vF, vR, yawRate] = this.driftAssist(vF, vR, yawRate, fx, fz, rx, rz, dt);
     } else {
       // Arcade air control: the car (and its flight path) gently line up with the road below,
       // so ramps on curving sections don't throw everyone into the wall.
@@ -294,6 +295,36 @@ export class Car {
     } else { this.wrongWay = false; }
 
     this.wheelSpin += (vF / this.model.dims.r) * dt;
+  }
+
+  /**
+   * Player drift assist: close to a wall the slide is pulled back onto the road and the nose is turned
+   * away from the barrier, so a drift that is held a bit too long ends on the kerb, not in the fence.
+   */
+  driftAssist(vF, vR, yawRate, fx, fz, rx, rz, dt) {
+    const q = this.track.closest(this.x, this.z, this.trackIndex);
+    const side = Math.sign(q.lateral) || 1;
+    const edge = this.track.half - 0.45 - Math.abs(q.lateral);
+    const k = 1 - edge / CAR.DRIFT_WALL_ASSIST;
+    if (k <= 0) return [vF, vR, yawRate];
+    const w = Math.min(1, k);
+    // velocity towards the wall (track right axis × side)
+    const vx = fx * vF + rx * vR, vz = fz * vF + rz * vR;
+    const vn = (vx * q.rx + vz * q.rz) * side;
+    if (vn > 0) {
+      const cut = vn * Math.min(1, w * 10 * dt);
+      const nvx = vx - q.rx * side * cut, nvz = vz - q.rz * side * cut;
+      vF = nvx * fx + nvz * fz;
+      vR = nvx * rx + nvz * rz;
+    }
+    // nose pointing into the wall → ease the yaw that keeps turning it there and steer it back
+    // (heading -= yawRate·dt, so a positive yawRate swings the nose towards the track's right)
+    const into = (fx * q.rx + fz * q.rz) * side * Math.sign(vF || 1);
+    if (into > 0.05) {
+      if (yawRate * side > 0) yawRate *= 1 - w * 0.8;
+      yawRate -= side * w * 1.3 * Math.min(1, into * 3);
+    }
+    return [vF, vR, yawRate];
   }
 
   endDrift(award) {
