@@ -1,6 +1,6 @@
 {
   "name": "neon-rush",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "description": "NEON RUSH — 3D arcade neon racing game for desktop and mobile browsers (Three.js, PWA)",
