@@ -5,8 +5,8 @@ const CSS = `/* ----------------------------------------------------------------
 .g-zr { stroke: var(--red); }
 .phud.launch .g-zone { opacity: 0.95; }
 .phud.launch .g-red { opacity: 0; }
-.gauge[data-lz="ok"] .g-tip { stroke: var(--green); }
-.gauge[data-lz="hot"] .g-tip { stroke: var(--red); }
+.phud.launch .gauge[data-lz="ok"] .g-tip { stroke: var(--green); }
+.phud.launch .gauge[data-lz="hot"] .g-tip { stroke: var(--red); }
 .phud.launch .gauge[data-lz="ok"] .kmh { color: var(--green); text-shadow: 0 0 18px rgba(125,255,176,0.7), 0 2px 0 rgba(0,0,0,0.6); }
 .phud.launch .gauge[data-lz="hot"] .kmh { color: var(--red); text-shadow: 0 0 18px rgba(255,64,96,0.8), 0 2px 0 rgba(0,0,0,0.6); animation: lz-blink 0.35s steps(2) infinite; }
 .h-launch { position: absolute; left: 50%; top: 36%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 18px 10px; border-radius: 4px; background: rgba(8,5,18,0.78); border: 1px solid rgba(255,255,255,0.14); border-left: 3px solid #fff; text-align: center; pointer-events: none; white-space: nowrap; transition: opacity 0.4s; }

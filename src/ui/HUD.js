@@ -1,6 +1,7 @@
 import { eventBus, Events } from '../core/EventBus.js';
-import { ELIMINATION } from '../core/Constants.js';
+import { ELIMINATION, CAR } from '../core/Constants.js';
 import { ITEM_ICONS, ITEM_NAMES, ITEM_COLORS, UI_ICONS } from './Icons.js';
+import { injectLaunchStyle } from './LaunchStyle.js';
 
 const fmt = (t) => (t == null ? '-:--.--' : `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`);
 const hexCss = (n) => '#' + n.toString(16).padStart(6, '0');
@@ -31,6 +32,7 @@ export class HUD {
     this.panes = [];
     this.outline = null;
     this.towerAt = 0;
+    injectLaunchStyle();
     eventBus.on(Events.UI_POPUP, ({ player, text, color, big }) => this.popup(player, text, color, big));
     eventBus.on(Events.RACE_COUNTDOWN, ({ n }) => this.count(n));
     eventBus.on(Events.ITEM_PICKUP, ({ car }) => { if (car?.human && this.race?.cars.includes(car)) this.roulette(car.player); });
@@ -87,6 +89,8 @@ export class HUD {
               <path d="${ARC_IN}" class="g-in" fill="none"/>
               <path d="${ARC}" class="g-bg" fill="none" pathLength="100"/>
               <path d="${ARC_OUT}" class="g-red" fill="none" pathLength="100"/>
+              <path d="${ARC_OUT}" class="g-zone g-zg" fill="none" pathLength="100" stroke-dasharray="${(CAR.LAUNCH_GREEN[1] - CAR.LAUNCH_GREEN[0]) * 100} 200" stroke-dashoffset="${-CAR.LAUNCH_GREEN[0] * 100}"/>
+              <path d="${ARC_OUT}" class="g-zone g-zr" fill="none" pathLength="100" stroke-dasharray="${(1 - CAR.LAUNCH_RED) * 100} 200" stroke-dashoffset="${-CAR.LAUNCH_RED * 100}"/>
               <path d="${ARC}" class="g-glow" fill="none" stroke="url(#gg${p})" mask="url(#gm${p})"/>
               <path d="${ARC}" class="g-fg" fill="none" pathLength="100" stroke="url(#gg${p})" mask="url(#gm${p})"/>
               <circle class="g-tip" r="5" cx="30.72" cy="140"/>
@@ -97,6 +101,7 @@ export class HUD {
           <div class="meter drift-m" hidden><div class="ml"><span>Дрифт</span><b class="dl"></b></div><div class="mb"><i></i><u class="ticks"></u></div></div>
           <div class="meter nitro-m"><div class="ml"><span>Нитро <kbd class="kbd-only">${NITRO_KEYS[p]}</kbd></span><b class="nv">0%</b></div><div class="mb"><i></i><u class="ticks"></u></div></div>
         </div>
+        <div class="h-launch" hidden><b></b><span></span></div>
         <div class="h-count"></div>
         <div class="h-out" hidden><div><small class="ho-k">Выбывание</small><b>Выбыл</b><small>Смотри за лидером</small></div></div>`;
       this.root.appendChild(el);
@@ -108,7 +113,8 @@ export class HUD {
         elim: q('.h-elim'), elimNum: q('.h-elim b'), elimLbl: q('.el-l'), elimBar: q('.el-bar i'),
         feed: q('.h-feed'), banner: q('.h-banner'), warn: q('.h-warn'),
         slot: q('.slot'), slotIco: q('.slot-ico'), slotL: q('.slot-l'),
-        mask: q('.g-mask'), tip: q('.g-tip'), kmh: q('.kmh'), gear: q('.gear'),
+        mask: q('.g-mask'), tip: q('.g-tip'), kmh: q('.kmh'), unit: q('.g-read .unit'), gear: q('.gear'), gaugeEl: q('.gauge'),
+        launch: q('.h-launch'), launchB: q('.h-launch b'), launchS: q('.h-launch span'),
         drift: q('.drift-m'), driftBar: q('.drift-m i'), dl: q('.dl'),
         nitro: q('.nitro-m'), nitroBar: q('.nitro-m i'), nv: q('.nv'),
         count: q('.h-count'), out: q('.h-out'), lines: q('.speedlines'),
@@ -331,9 +337,17 @@ export class HUD {
         if (h.item) pane.slot.style.setProperty('--ic', ITEM_COLORS[h.item] || '#ffd400');
         pane.slotL.innerHTML = h.item ? `<b>${ITEM_NAMES[h.item]}</b><span><kbd>${ITEM_KEYS[p]}</kbd> использовать</span>` : '<span class="empty">Бонус</span>';
       }
-      // speed
-      txt('kmh', pane.kmh, String(h.kmh));
-      const f = Math.max(0, Math.min(1, h.speedFrac / 1.12));
+      // speed (on the grid: engine revs + launch zones)
+      const grid = h.phase === 'countdown';
+      if (L.grid !== grid) {
+        L.grid = grid;
+        pane.el.classList.toggle('launch', grid);
+        pane.unit.textContent = grid ? 'об/мин' : 'км/ч';
+        if (!grid) setTimeout(() => { if (!L.grid) pane.launch.hidden = true; }, 900);
+      }
+      if (grid) this.updateLaunch(pane, h.launchRev);
+      txt('kmh', pane.kmh, String(grid ? Math.round((900 + h.launchRev * 7600) / 100) * 100 : h.kmh));
+      const f = grid ? h.launchRev : Math.max(0, Math.min(1, h.speedFrac / 1.12));
       const fq = Math.round(f * 200) / 2;
       if (L.f !== fq) {
         L.f = fq;
@@ -376,6 +390,27 @@ export class HUD {
       if (towerDue && pane.towerOn) this.updateTower(pane, p);
     });
     this.drawMinimap();
+  }
+
+  /** Launch coaching on the grid: where the revs are and what to do with the gas. */
+  updateLaunch(pane, rev) {
+    const [g0] = CAR.LAUNCH_GREEN;
+    const zone = rev >= CAR.LAUNCH_RED ? 'hot' : rev >= g0 ? 'ok' : rev > 0.03 ? 'up' : 'idle';
+    const L = pane.last;
+    if (L.lz === zone) return;
+    L.lz = zone;
+    pane.launch.hidden = false;
+    pane.launch.className = 'h-launch ' + zone;
+    pane.gaugeEl.dataset.lz = zone;
+    const touch = document.body.classList.contains('touch-ui');
+    const T = {
+      idle: [touch ? 'Зажми джойстик на цифре «1»' : 'Жми газ на цифре «1»', 'Стрелка в зелёной зоне на старте — рывок вперёд'],
+      up: ['Обороты растут…', 'Доведи стрелку до зелёной зоны'],
+      ok: ['Держи! Зелёная зона', 'На старте будет идеальный рывок'],
+      hot: ['Перегрев! Отпусти газ', 'В красной зоне двигатель заглохнет на старте'],
+    }[zone];
+    pane.launchB.textContent = T[0];
+    pane.launchS.textContent = T[1];
   }
 
   /** Live standings (F1/GRID-style), refreshed ~5×/s. */
