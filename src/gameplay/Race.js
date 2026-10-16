@@ -297,10 +297,10 @@ export class Race {
     if (this.input.pressed(p, 'item')) c.item = true;
     if (this.input.pressed(p, 'camera')) this.rigs[p].cycle();
     if (this.input.pressed(p, 'respawn')) c.respawn = true;
-    // perfect-start tracking
+    // launch revs on the grid: gas raises them, releasing lets them fall (shown on the speedometer)
     if (this.phase === 'countdown') {
-      const thr = this.input.touchEnabled && p === 0 && !this.input.keys.size ? 0 : st.throttle;
-      if (thr) car.throttleHeld = (car.throttleHeld || 0) + this._dt; else car.throttleHeld = 0;
+      const r = car.launchRev || 0;
+      car.launchRev = st.throttle > 0 ? Math.min(1, r + CAR.LAUNCH_RISE * this._dt) : Math.max(0, r - CAR.LAUNCH_FALL * this._dt);
     }
   }
 
@@ -321,15 +321,17 @@ export class Race {
         car.controlEnabled = true;
         car.lapStart = 0;
         if (car.human) {
-          const held = car.throttleHeld || 0;
-          if (held > 0 && held <= CAR.PERFECT_START_WINDOW + 0.1) {
+          const rev = car.launchRev || 0;
+          car.launchResult = rev >= CAR.LAUNCH_RED ? 'hot' : rev >= CAR.LAUNCH_GREEN[0] ? 'perfect' : 'none';
+          if (car.launchResult === 'perfect') {
             car.giveBoost(1.4);
             this.popup(car.player, 'ИДЕАЛЬНЫЙ СТАРТ!', '#7dffb0', true);
-          } else if (held > 1.2) {
+          } else if (car.launchResult === 'hot') {
             car.controlEnabled = false;
             setTimeout(() => { car.controlEnabled = true; }, 700);
-            this.popup(car.player, 'ФАЛЬСТАРТ — ДВИГАТЕЛЬ ЗАХЛЕБНУЛСЯ', '#ff4060');
+            this.popup(car.player, 'ПЕРЕГРЕВ ДВИГАТЕЛЯ', '#ff4060');
           }
+          car.launchRev = 0;
         } else if (Math.random() < 0.35) car.giveBoost(1.0);
       }
     }
@@ -672,7 +674,7 @@ export class Race {
       elimTimer: this.mode === 'elim' && this.phase === 'racing' ? this.elimTimer : null,
       danger: this.mode === 'elim' && car.place === active && active > 1,
       ghostDelta: p === 0 ? this.ghostDelta : null,
-      mode: this.mode, phase: this.phase, countdown: this.countdown,
+      mode: this.mode, phase: this.phase, countdown: this.countdown, launchRev: car.launchRev || 0,
       slipstream: car.slipstream, empTime: car.empTime, shield: car.shieldTime,
       color: car.color, name: car.name,
     };
