@@ -107,9 +107,9 @@ export class AIDriver {
       const dd = car.driftDir;
       // solver: yaw the line needs → stick position inside the drift range
       const amount = (steer * dd) / CAR.DRIFT_TURN;
-      const tight = clamp((2 * (amount - CAR.DRIFT_YAW_MIN)) / (1 - CAR.DRIFT_YAW_MIN) - 1, -1, 1);
+      const tight = clamp((amount - CAR.DRIFT_YAW_BIAS) / CAR.DRIFT_YAW_GAIN, -1, 1);
       steer = dd * tight;
-      this.driftLow = amount < CAR.DRIFT_YAW_MIN * 0.6 ? this.driftLow + dt : 0;
+      this.driftLow = amount < 0.06 ? this.driftLow + dt : 0;
       const kOut = this.curvAhead(Math.max(4, speed * 0.3), 18);
       const bendEnds = Math.abs(kOut) < 0.004 || Math.sign(kOut) !== dd;
       const nearWall = Math.abs(car.lateral) > t.half - 2.6 && Math.sign(car.lateral) !== dd;

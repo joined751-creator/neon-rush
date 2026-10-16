@@ -46,24 +46,26 @@ export const CAR = {
   TURN_RATE: 1.9, // rad/s at full lock
   HANDLING_RANGE: 0.9,
   GRIP: 8.5,
-  DRIFT_GRIP: 5.2, // was 1.4: the car kept its sideways momentum and slid into walls
+  DRIFT_GRIP: 6.6, // was 5.2 (1.4 before that): less sideways slide, the car goes where it points
   DRIFT_MIN_SPEED: 16,
   DRIFT_MIN_STEER: 0.3,
   DRIFT_TURN: 1.18, // yaw multiplier at full lock while drifting
-  DRIFT_YAW_MIN: 0.15, // yaw share with full counter-steer (wide line)
+  DRIFT_YAW_BIAS: 0.3, // drift yaw share with the stick centred (gentle arc)
+  DRIFT_YAW_GAIN: 0.7, // stick authority: full lock → 1.0, full counter-steer → -0.4 (straightens out)
+  DRIFT_WALL_ASSIST: 5, // m from the wall where a human's slide is gently pulled back onto the road
   DRIFT_EXIT_TIME: 0.4, // seconds of hard counter-steer that straighten the car out of a slide
   DRIFT_DRAG: 0.035, // gentle speed bleed while sliding
   DRIFT_LEVELS: [0.55, 1.25, 2.1],
   DRIFT_BOOST_TIME: [0.55, 1.0, 1.6],
-  DRIFT_VISUAL_ANGLE: 0.46,
+  DRIFT_VISUAL_ANGLE: 0.38,
   BOOST_ACCEL: 30,
   BOOST_TOP_MULT: 1.3,
   NITRO_DRAIN: 32,
   NITRO_START: 35,
-  NITRO_DRIFT_GAIN: 9,
-  NITRO_SLIPSTREAM_GAIN: 12,
-  NITRO_NEARMISS: 10,
-  NITRO_JUMP: 12,
+  NITRO_DRIFT_GAIN: 11,
+  NITRO_SLIPSTREAM_GAIN: 14,
+  NITRO_NEARMISS: 12,
+  NITRO_JUMP: 14,
   PAD_BOOST_TIME: 1.1,
   WALL_BOUNCE: 0.35,
   CAR_BOUNCE: 0.2, // car-to-car restitution (was 0.45 — bumps knocked bots far back)
@@ -81,7 +83,11 @@ export const CAR = {
   SLIPSTREAM_ACCEL: 7,
   STUCK_TIME: 3.5,
   WRONG_WAY_TIME: 1.4,
-  PERFECT_START_WINDOW: 0.35,
+  // launch: holding gas on the grid raises the revs; GO inside the green zone = perfect start, red = overheat
+  LAUNCH_RISE: 0.75, // revs per second while gas is held (from "1" on the lights → green at GO)
+  LAUNCH_FALL: 1.4,
+  LAUNCH_GREEN: [0.5, 0.9],
+  LAUNCH_RED: 0.9,
 };
 
 // Car archetypes — stats 0..1
