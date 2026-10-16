@@ -4,6 +4,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { GAME } from '../core/Constants.js';
 
 /** Speed FX: radial blur + chromatic aberration per viewport (strength 0..1). */
@@ -98,6 +99,10 @@ export class RenderSystem {
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);
     this.composer.addPass(new OutputPass());
+    // FXAA: cheap edge smoothing for phones, where MSAA is too expensive
+    this.fxaa = new ShaderPass(FXAAShader);
+    this.fxaa.enabled = false;
+    this.composer.addPass(this.fxaa);
     window.addEventListener('resize', () => this.resize());
     this.resize();
   }
@@ -116,12 +121,13 @@ export class RenderSystem {
     for (const t of [this.composer.renderTarget1, this.composer.renderTarget2]) {
       if (t.samples !== samples) { t.samples = samples; t.dispose(); }
     }
+    this.fxaa.enabled = samples === 0 && q !== 'low';
     this.resize();
   }
 
   /** Dynamic resolution (0.5..1) — lowered automatically when FPS drops on phones. */
   setScale(s) {
-    const v = Math.max(0.5, Math.min(1, s));
+    const v = Math.max(0.75, Math.min(1, s));
     if (Math.abs(v - (this.scale ?? 1)) < 0.01) return;
     this.scale = v;
     this.resize();
@@ -154,6 +160,7 @@ export class RenderSystem {
     this.composer.setPixelRatio(dpr);
     this.composer.setSize(W, H);
     this.bloom.resolution.set(W * dpr * 0.5, H * dpr * 0.5);
+    this.fxaa.uniforms.resolution.value.set(1 / Math.max(1, W * dpr), 1 / Math.max(1, H * dpr));
     this.updateAspects();
   }
 

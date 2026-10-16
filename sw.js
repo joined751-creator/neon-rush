@@ -1,6 +1,6 @@
 // NEON RUSH service worker: offline play after the first visit.
 // Stale-while-revalidate for the game files, Three.js from the CDN and fonts.
-const CACHE = 'neon-rush-v7';
+const CACHE = 'neon-rush-v8';
 const CORE = ['./', 'index.html', 'src/ui/style.css', 'src/main.js', 'manifest.webmanifest', 'icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
