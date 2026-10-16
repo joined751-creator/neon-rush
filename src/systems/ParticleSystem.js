@@ -11,7 +11,10 @@ const VERT = /* glsl */`
     vAlpha = aAlpha;
     vColor = aColor;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aSize * uScale / max(0.5, -mv.z);
+    float z = -mv.z;
+    // fade + clamp near the camera so close particles never become huge blurry blobs
+    vAlpha *= smoothstep(1.5, 6.0, z);
+    gl_PointSize = min(aSize * uScale / max(0.5, z), uScale * 0.12);
     gl_Position = projectionMatrix * mv;
   }
 `;

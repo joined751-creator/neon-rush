@@ -22,9 +22,11 @@ const SpeedShader = {
         vec4 q = uRect[i];
         if (uv.x >= q.x && uv.x <= q.x + q.z && uv.y >= q.y && uv.y <= q.y + q.w) { s = uStr[i]; r = q; c = q.xy + q.zw * vec2(0.5, 0.52); }
       }
-      if (s < 0.002) { gl_FragColor = texture2D(tDiffuse, uv); return; }
       vec2 d = uv - c;
       float l = length(d / r.zw);
+      // cinematic grade: soft vignette + gentle contrast, always on
+      float vig = 1.0 - 0.38 * smoothstep(0.35, 1.05, l);
+      if (s < 0.002) { vec3 b = texture2D(tDiffuse, uv).rgb; b = mix(b, b * b * (3.0 - 2.0 * min(b, 1.0)), 0.12); gl_FragColor = vec4(b * vig, 1.0); return; }
       float amt = s * smoothstep(0.15, 0.75, l) * 0.045;
       vec3 col = vec3(0.0);
       for (int k = 0; k < 8; k++) {
@@ -35,7 +37,9 @@ const SpeedShader = {
         col.g += texture2D(tDiffuse, clamp(uv - o, lo, hi)).g;
         col.b += texture2D(tDiffuse, clamp(uv - o * 0.85, lo, hi)).b;
       }
-      gl_FragColor = vec4(col / 8.0, 1.0);
+      col /= 8.0;
+      col = mix(col, col * col * (3.0 - 2.0 * min(col, 1.0)), 0.12);
+      gl_FragColor = vec4(col * vig, 1.0);
     }`,
 };
 
@@ -84,7 +88,9 @@ export class RenderSystem {
     this.views = [];
     this.quality = 'medium';
 
-    this.composer = new EffectComposer(this.renderer);
+    // MSAA render target: removes the jagged "staircase" edges that the post-processing chain otherwise has
+    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+    this.composer = new EffectComposer(this.renderer, rt);
     this.splitPass = new SplitRenderPass(scene, () => this.views);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.5, 0.78);
     this.composer.addPass(this.splitPass);
