@@ -1,4 +1,5 @@
-// Launch coaching on the grid (rev zones on the speedometer + hint). Injected once from the HUD.
+// HUD style additions injected once from the HUD: launch coaching on the grid (rev zones + hint)
+// and quieter in-race notifications.
 const CSS = `/* ---------------------------------------------------------------- launch coaching (grid) */
 .g-zone { stroke-width: 7; opacity: 0; transition: opacity 0.3s; }
 .g-zg { stroke: var(--green); }
@@ -24,6 +25,31 @@ body.touch-ui .phud .h-launch { top: 134px; }
 body.touch-ui .phud .h-launch b { font-size: 16px; }
 body.touch-ui .phud .h-launch span { font-size: 10px; }
 body.touch-ui.portrait .phud .h-launch { top: 230px; bottom: auto; }
+
+/* ---------------------------------------------------------------- quiet race notifications
+   Lap / bonus banners: a compact strip at the top centre instead of a full-width title over the road.
+   Feed (overtake, near miss…): small chips that don't cover the track. Finish / win banners stay big. */
+.h-banner { top: 10px; }
+.bn:not(.win):not(.fin):not(.bad) { gap: 2px; padding: 6px 22px 7px; min-width: 0; background: linear-gradient(90deg, transparent, rgba(8,4,18,0.62) 18%, rgba(8,4,18,0.62) 82%, transparent); animation: bnQuiet 2.2s ease forwards; }
+.bn:not(.win):not(.fin):not(.bad)::before, .bn:not(.win):not(.fin):not(.bad)::after { left: 18%; right: 18%; opacity: 0.6; }
+.bn:not(.win):not(.fin):not(.bad) small { font-size: 8px; letter-spacing: 0.24em; }
+.bn:not(.win):not(.fin):not(.bad) b { font-size: 16px; text-shadow: 0 0 10px var(--c), 0 2px 0 rgba(0,0,0,0.5); animation: none; }
+.bn.lap b { font-size: 16px; }
+.bn:not(.win):not(.fin):not(.bad) span { font-size: 9px; letter-spacing: 0.08em; }
+.bn.win, .bn.fin, .bn.bad { margin-top: 18vh; }
+@keyframes bnQuiet { 0% { opacity: 0; transform: translateY(-8px); } 10% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+.ft { font-size: 10px; padding: 2px 10px 2px 8px; gap: 7px; opacity: 0.9; }
+.ft.strong { font-size: 11px; padding-block: 3px; }
+.ft i { width: 4px; height: 4px; }
+.ft::before { background: linear-gradient(90deg, rgba(8,5,18,0.35), rgba(8,5,18,0.6)); box-shadow: none; border-right-width: 2px; }
+.ft span { text-shadow: none; }
+.compact .h-banner { top: 10px; }
+.phud.sz-short .h-banner { top: 8px; }
+body.touch-ui .phud .h-banner { top: 6px; }
+body.touch-ui .phud .h-feed { top: 62px; gap: 3px; }
+body.touch-ui .phud.elim .h-feed { top: 96px; }
+body.touch-ui.portrait .phud .h-banner { top: 200px; }
+body.touch-ui.portrait .phud .h-feed { top: 256px; }
 `;
 
 let done = false;
