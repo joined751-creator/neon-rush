@@ -4,6 +4,25 @@ import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { disposeTree } from './Environment.js';
 import { tidyModel } from '../gameplay/LightTrails.js';
 
+let poolTex = null;
+/** Smooth radial gradient (large, linear-filtered: no banding or speckles on phone screens). */
+function poolTexture() {
+  if (poolTex) return poolTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.45, 'rgba(255,255,255,0.55)');
+  gr.addColorStop(0.8, 'rgba(255,255,255,0.12)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 256, 256);
+  poolTex = new THREE.CanvasTexture(c);
+  poolTex.colorSpace = THREE.SRGBColorSpace;
+  return poolTex;
+}
+
 /** Showroom scene: turntables with the players' selected cars. */
 export class Garage {
   constructor(renderer) {
@@ -66,10 +85,18 @@ export class Garage {
       const ring = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(CAR_COLORS[garage[p].color].hex).multiplyScalar(2.5) }));
       ring.rotation.x = Math.PI / 2;
       ring.position.y = 0.26;
-      plat.add(disc, ring);
+      // podium lit in the car's colour: a soft light pool on the disc (no lamp: its highlight sparkled on the paint)
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(3.3, 64), new THREE.MeshBasicMaterial({
+        map: poolTexture(), color: new THREE.Color(CAR_COLORS[garage[p].color].hex).multiplyScalar(0.8),
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      }));
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.y = 0.252;
+      pool.renderOrder = 2;
+      plat.add(disc, ring, pool);
       plat.position.x = players > 1 ? (p === 0 ? -3.9 : 3.9) : 0;
       this.scene.add(plat);
-      this.platforms.push({ plat, ring });
+      this.platforms.push({ plat, ring, pool });
       this.models.push(null);
       this.refresh(p, garage[p]);
     }
@@ -95,6 +122,7 @@ export class Garage {
     if (m.shadow) m.shadow.visible = false;
     this.platforms[p].plat.add(m.root);
     this.platforms[p].ring.material.color.setHex(color).multiplyScalar(2.5);
+    this.platforms[p].pool.material.color.setHex(color).multiplyScalar(0.8);
     this.models[p] = m;
     this.pop = 0.25;
   }
