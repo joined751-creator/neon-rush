@@ -414,8 +414,9 @@ export class Car {
         for (const w of [lw, rw]) {
           this.fx.sparks.emit({
             x: w.x, y: this.y + 0.15, z: w.z,
-            vx: -fx * 6 + (Math.random() - 0.5) * 8, vy: 2 + Math.random() * 4, vz: -fz * 6 + (Math.random() - 0.5) * 8,
-            color: DRIFT_COLORS[this.driftLevel], size: 0.5, sizeEnd: 0.05, life: 0.35, gravity: 14, drag: 1,
+            // carried along with the car (world-still sparks left a dotted line of blobs on the road)
+            vx: this.vx * 0.85 - fx * 4 + (Math.random() - 0.5) * 6, vy: 2 + Math.random() * 3, vz: this.vz * 0.85 - fz * 4 + (Math.random() - 0.5) * 6,
+            color: DRIFT_COLORS[this.driftLevel], size: 0.38, sizeEnd: 0.04, life: 0.22, gravity: 14, drag: 0,
           });
         }
       }
@@ -425,9 +426,10 @@ export class Car {
       const col = this.nitroActive ? 0xff4ad0 : 0x4ad8ff;
       for (const side of [-1, 1]) {
         _v.set(this.x + fx * (m.dims.rear - 0.5) + rx * side * 0.42, this.y + 0.42, this.z + fz * (m.dims.rear - 0.5) + rz * side * 0.42);
+        // tight exhaust sparks that stay at the pipes (big slow puffs used to hang between car and camera as blobs)
         this.fx.sparks.emit({
-          x: _v.x, y: _v.y, z: _v.z, vx: this.vx * 0.6 - fx * 8, vy: Math.random(), vz: this.vz * 0.6 - fz * 8,
-          color: col, size: 1.1, sizeEnd: 0.1, life: 0.25, drag: 2,
+          x: _v.x, y: _v.y, z: _v.z, vx: this.vx * 0.93 - fx * 3, vy: Math.random() * 0.6, vz: this.vz * 0.93 - fz * 3,
+          color: col, size: 0.5, sizeEnd: 0.05, life: 0.14, drag: 0,
         });
       }
     }
@@ -436,15 +438,17 @@ export class Car {
       for (let k = 0; k < 3; k++) {
         this.fx.sparks.emit({
           x: this.x + rx * side * 1.0, y: this.y + 0.4, z: this.z + rz * side * 1.0,
-          vx: this.vx * 0.5 + (Math.random() - 0.5) * 10, vy: 3 + Math.random() * 5, vz: this.vz * 0.5 + (Math.random() - 0.5) * 10,
-          color: 0xffc040, size: 0.45, sizeEnd: 0.05, life: 0.4, gravity: 18, drag: 0.5,
+          vx: this.vx * 0.8 + (Math.random() - 0.5) * 8, vy: 3 + Math.random() * 5, vz: this.vz * 0.8 + (Math.random() - 0.5) * 8,
+          color: 0xffc040, size: 0.35, sizeEnd: 0.04, life: 0.3, gravity: 18, drag: 0.5,
         });
       }
     }
     if (this.slipstream && this.fx && Math.random() < 0.6) {
+      // wind streaks start ahead of the car and die before they reach the chase camera (no blobs on the lens)
+      const sx = (Math.random() - 0.5) * 3, ahead = 1 + Math.random() * 3;
       this.fx.sparks.emit({
-        x: this.x + (Math.random() - 0.5) * 3, y: this.y + 0.5 + Math.random() * 1.5, z: this.z + (Math.random() - 0.5) * 3,
-        vx: -fx * 25, vy: 0, vz: -fz * 25, color: 0xaaddff, size: 0.35, sizeEnd: 0.1, life: 0.3, drag: 0,
+        x: this.x + fx * ahead + rx * sx, y: this.y + 0.5 + Math.random() * 1.2, z: this.z + fz * ahead + rz * sx,
+        vx: this.vx * 0.55, vy: 0, vz: this.vz * 0.55, color: 0xaaddff, size: 0.22, sizeEnd: 0.05, life: 0.16, drag: 0,
       });
     }
   }

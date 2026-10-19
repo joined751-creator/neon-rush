@@ -43,6 +43,10 @@ body.touch-ui.portrait .phud .h-launch { top: 230px; bottom: auto; }
 .ft i { width: 4px; height: 4px; }
 .ft::before { background: linear-gradient(90deg, rgba(8,5,18,0.35), rgba(8,5,18,0.6)); box-shadow: none; border-right-width: 2px; }
 .ft span { text-shadow: none; }
+.ft.bump { animation: ftBump 2.3s var(--ease) forwards; }
+@keyframes ftBump { 0% { opacity: 1; transform: scale(1.12); } 8% { transform: none; } 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(16px); } }
+/* place label stays readable while the big digit animates */
+.h-pos .h-lbl { position: relative; z-index: 1; }
 .compact .h-banner { top: 10px; }
 .phud.sz-short .h-banner { top: 8px; }
 body.touch-ui .phud .h-banner { top: 6px; }

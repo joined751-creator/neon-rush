@@ -331,7 +331,7 @@ const SKY_FRAG = /* glsl */`
     float fwv = max(fwidth(wc.x), fwidth(wc.y));
     float lit = step(0.62, wkHash(cell + b * 0.13)) * step(0.18, wkHash(vec2(floor(y / 3.6), b)));
     float shape = step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75);
-    float win = mix(lit * shape, 0.13, smoothstep(0.35, 0.9, fwv));
+    float win = mix(lit * shape, 0.13, smoothstep(0.12, 0.42, fwv));
     vec3 wcol = mix(uWin, uWin2, step(0.7, wkHash(cell + 3.7)));
     col += wcol * win * (0.5 + 0.7 * wkHash(cell + 1.1));
     // neon crown lines + edge strips on some towers

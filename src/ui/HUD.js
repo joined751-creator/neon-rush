@@ -189,14 +189,25 @@ export class HUD {
   feed(p, text, color = '#fff', strong = false) {
     const pane = this.panes[p];
     if (!pane) return;
+    // same note again (drift, drift, drift…) → one line with a counter instead of a stack of copies
+    const top = pane.feed.firstElementChild;
+    if (top && top.dataset.t === text) {
+      top.dataset.n = String((+top.dataset.n || 1) + 1);
+      top.lastChild.textContent = `${text} ×${top.dataset.n}`;
+      top.classList.remove('bump'); void top.offsetWidth; top.classList.add('bump');
+      clearTimeout(top._t);
+      top._t = setTimeout(() => top.remove(), 2300);
+      return;
+    }
     const d = document.createElement('div');
+    d.dataset.t = text;
     d.className = 'ft' + (strong ? ' strong' : '');
     d.style.setProperty('--c', color);
     d.innerHTML = '<i></i><span></span>';
     d.lastChild.textContent = text;
     pane.feed.prepend(d);
     while (pane.feed.children.length > 3) pane.feed.lastChild.remove();
-    setTimeout(() => d.remove(), 2300);
+    d._t = setTimeout(() => d.remove(), 2300);
   }
 
   banner(p, { kicker = '', main, sub = '', color = '#fff', cls = '' }) {

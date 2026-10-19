@@ -9,6 +9,8 @@ import { eventBus, Events } from '../core/EventBus.js';
  */
 
 const N = 26; // trail points
+const _dir = new THREE.Vector3();
+const FW_COLORS = [0xff2bd6, 0x00e5ff, 0xffd400, 0x39ff88, 0x8a5cff, 0xff6a3d];
 const VERT = /* glsl */`
   attribute float aK;
   attribute float aA;
@@ -55,8 +57,11 @@ export class OverdriveFX {
     this.tipShown = false;
     eventBus.on(Events.CAR_OVERDRIVE, ({ car }) => this.onStart(car));
     eventBus.on(Events.CAR_CAR_HIT, ({ a, b }) => this.ram(a, b) || this.ram(b, a));
-    eventBus.on(Events.CAR_FINISH, ({ car }) => {
-      if (!car.human || !this.race || this.race.humans.length !== 1 || !this.race.cars.includes(car)) return;
+    eventBus.on(Events.CAR_FINISH, ({ car, place }) => {
+      if (!car.human || !this.race || !this.race.cars.includes(car)) return;
+      // neon fireworks over the track for a podium finish (more for a win)
+      if (place <= 3 && !this.race.demo) this.fw = { car, t: 0, next: 0.15, left: place === 1 ? 16 : 9, rockets: [] };
+      if (this.race.humans.length !== 1) return;
       this.cine = { car, t: 0, a0: car.heading + Math.PI * 0.55 };
     });
   }
@@ -66,6 +71,7 @@ export class OverdriveFX {
     this.detach();
     this.race = race;
     this.cine = null;
+    this.fw = null;
     this.items = race.humans.map((car) => this.makeTrail(race.scene, car));
     if (race.humans.length && !this.tipShown) {
       this.tipShown = true;
@@ -181,6 +187,42 @@ export class OverdriveFX {
       this.updateTrail(it, dt);
     }
     this.updateCinematic(dt);
+    this.updateFireworks(dt);
+  }
+
+  updateFireworks(dt) {
+    const fw = this.fw;
+    if (!fw) return;
+    const sparks = this.race.fx.sparks;
+    fw.t += dt;
+    fw.next -= dt;
+    if (fw.left > 0 && fw.next <= 0) {
+      fw.left--;
+      fw.next = 0.22 + Math.random() * 0.3;
+      // in front of that player's camera, where the (still rolling) car will be when the shell bursts
+      const c = fw.car, cam = this.race.rigs[c.player]?.camera, fuse = 0.8 + Math.random() * 0.25;
+      if (cam) cam.getWorldDirection(_dir); else _dir.set(Math.sin(c.heading), 0, Math.cos(c.heading));
+      const dl = Math.hypot(_dir.x, _dir.z) || 1, dx = _dir.x / dl, dz = _dir.z / dl;
+      const d = 45 + Math.random() * 30, side = (Math.random() - 0.5) * 2 * (6 + d * 0.25);
+      fw.rockets.push({
+        x: c.x + c.vx * fuse + dx * d - dz * side, y: c.y + 1, z: c.z + c.vz * fuse + dz * d + dx * side,
+        vy: 11.5 + Math.random() * 2.5, age: 0, fuse,
+        col: FW_COLORS[(Math.random() * FW_COLORS.length) | 0],
+      });
+    }
+    for (let i = fw.rockets.length - 1; i >= 0; i--) {
+      const r = fw.rockets[i];
+      r.age += dt;
+      r.vy -= 9 * dt;
+      r.y += r.vy * dt;
+      sparks.emit({ x: r.x, y: r.y, z: r.z, vx: (Math.random() - 0.5), vy: -2, vz: (Math.random() - 0.5), color: 0xffd9a0, size: 0.45, sizeEnd: 0.05, life: 0.35, drag: 1 });
+      if (r.age >= r.fuse) {
+        sparks.burst(90, { x: r.x, y: r.y, z: r.z, color: r.col, size: 3, sizeEnd: 0.1, life: 1.3, gravity: 4, drag: 1.3 }, 30);
+        sparks.burst(24, { x: r.x, y: r.y, z: r.z, color: 0xffffff, size: 0.9, sizeEnd: 0.05, life: 0.5, gravity: 2, drag: 2 }, 22);
+        fw.rockets.splice(i, 1);
+      }
+    }
+    if (fw.left <= 0 && !fw.rockets.length) this.fw = null;
   }
 
   updateTrail(it, dt) {

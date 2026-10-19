@@ -184,7 +184,7 @@ function buildPalms(ctx) {
 // --- city ----------------------------------------------------------------------------------------
 const BUILDING_PARS = /* glsl */`
   varying vec3 vBL, vBS, vBN;
-  varying float vBSeed;
+  flat varying float vBSeed;
   uniform vec3 uAccA, uAccB;
   ${GLSL_NOISE}
 `;
@@ -194,7 +194,8 @@ const BUILDING_EMIS = /* glsl */`
     float isSide = 1.0 - step(0.5, abs(vBN.y));
     float u = abs(vBN.x) > 0.5 ? bl.z * sc.z : bl.x * sc.x;
     float vy = bl.y * sc.y;
-    float seed = vBSeed;
+    // per-building seed: interpolated varyings drift by ~1e-7 per pixel and the hashes amplified that into speckle
+    float seed = floor(vBSeed * 4096.0 + 0.5) / 4096.0;
     float style = floor(fract(seed * 7.13) * 3.0);
     vec2 csz = style < 1.0 ? vec2(1.5, 3.0) : style < 2.0 ? vec2(1.25, 2.9) : vec2(1.9, 3.3);
     vec2 wc = vec2(u + 50.0, vy) / csz;
@@ -208,7 +209,7 @@ const BUILDING_EMIS = /* glsl */`
     else if (style < 2.0) shape = step(0.12, f.x) * step(0.26, f.y) * step(f.y, 0.8);
     else shape = step(0.34, f.x) * step(f.x, 0.66) * step(0.14, f.y) * step(f.y, 0.88);
     vec2 fw = fwidth(wc);
-    float far = smoothstep(0.3, 0.8, max(fw.x, fw.y));
+    float far = smoothstep(0.1, 0.38, max(fw.x, fw.y)); // fade to an average glow before windows shrink to 2-3 px (no shimmering speckles)
     float win = mix(lit * shape, litP * 0.16, far);
     float hc = wkHash(room * 1.37 + seed * 3.0);
     vec3 wcol = mix(vec3(1.0, 0.74, 0.46), vec3(0.62, 0.8, 1.0), step(0.5, hc)) * (0.6 + 0.4 * fract(hc * 7.3));
@@ -239,7 +240,7 @@ function buildingMaterial(theme) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uAccA = uA; sh.uniforms.uAccB = uB;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', 'varying vec3 vBL, vBS, vBN;\nvarying float vBSeed;\n#include <common>')
+      .replace('#include <common>', 'varying vec3 vBL, vBS, vBN;\nflat varying float vBSeed;\n#include <common>')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         vBL = position; vBN = normal;
         #ifdef USE_INSTANCING
@@ -259,7 +260,7 @@ function buildingMaterial(theme) {
 const HOLO_VERT = /* glsl */`
   attribute float aSeed;
   varying vec2 vUv;
-  varying float vSeed;
+  flat varying float vSeed;
   void main() {
     vUv = uv; vSeed = aSeed;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -270,13 +271,15 @@ const HOLO_FRAG = /* glsl */`
   uniform float uTime;
   uniform vec3 uTint;
   varying vec2 vUv;
-  varying float vSeed;
+  flat varying float vSeed;
   void main() {
     float t = uTime + vSeed * 17.0;
     float glitch = step(0.97, fract(sin(floor(t * 6.0) * 12.7 + vSeed) * 4375.5));
     vec2 uv = vUv + vec2(glitch * 0.004 * sin(vUv.y * 400.0), 0.0);
     vec3 c = texture2D(uMap, uv).rgb;
-    float scan = 0.7 + 0.3 * sin(vUv.y * 2400.0 - t * 8.0);
+    // scanlines fade out once they get thinner than ~2 px (they turned into moire on far / small screens)
+    float scanAA = 1.0 - smoothstep(0.25, 0.6, fwidth(vUv.y * 382.0));
+    float scan = 1.0 - 0.3 * scanAA * (0.5 - 0.5 * sin(vUv.y * 2400.0 - t * 8.0));
     float flick = 0.85 + 0.15 * sin(t * 23.0) * sin(t * 7.0);
     vec3 col = (c * 1.3 + uTint * 0.06) * scan * flick;
     gl_FragColor = vec4(col, 1.0);

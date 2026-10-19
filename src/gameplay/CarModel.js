@@ -426,11 +426,11 @@ function materials(colorHex, ghost, kit) {
   const hsl = {}; paintColor.getHSL(hsl);
   paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.55, hsl.l * 0.8));
   const paint = new THREE.MeshPhysicalMaterial({
-    color: paintColor, metalness: 0.65, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.035,
+    color: paintColor, metalness: 0.65, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.07,
     normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.12, 0.12), vertexColors: true, envMapIntensity: 1.25,
   });
   const glass = new THREE.MeshPhysicalMaterial({
-    color: 0x070a12, metalness: 0.2, roughness: 0.03, envMapIntensity: 2.4, clearcoat: 1, side: THREE.DoubleSide,
+    color: 0x070a12, metalness: 0.2, roughness: 0.08, envMapIntensity: 2.4, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
     transparent: true, opacity: 0.92,
   });
   const dark = new THREE.MeshStandardMaterial({ color: 0x0b0b10, metalness: 0.3, roughness: 0.6 });
@@ -450,6 +450,7 @@ function materials(colorHex, ghost, kit) {
 // ----------------------------------------------------------------------------------- main builder
 let flameGeo = null;
 
+const _tagPos = new THREE.Vector3();
 export function buildCarModel(typeId, colorHex, { label = null, ghost = false, tagLayer = 0, beams = true } = {}) {
   const geo = buildGeometries(SPECS[typeId] ? typeId : 'comet');
   const { S, B } = geo;
@@ -678,6 +679,12 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
     tag.position.y = 2.8;
     tag.renderOrder = 20;
     if (tagLayer) tag.layers.set(tagLayer);
+    // fade the name tag when its car is right in front of a camera (it used to fill half the split-screen view)
+    const tagMat = tag.material;
+    tag.onBeforeRender = (r, sc, cam) => {
+      const d = cam.position.distanceTo(tag.getWorldPosition(_tagPos));
+      tagMat.opacity = Math.min(1, Math.max(0, (d - 7) / 9));
+    };
     root.add(tag);
   }
 
