@@ -1,8 +1,8 @@
-import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
+import { CAR, CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD, GLOWS } from '../core/Progress.js';
 
-export const VERSION = 'v3.8';
+export const VERSION = 'v3.9';
 import { UI_ICONS } from './Icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -56,6 +56,10 @@ const CSS = `
 .pr-foot { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--muted); padding-top: 8px; border-top: 1px solid var(--line); }
 .pr-foot b { color: var(--gold); }
 #screen-title .title-badge { display: none; }
+/* tuned stats in the garage card */
+.segbar i.pr-upseg { background: linear-gradient(180deg, #fff, var(--cyan)); box-shadow: 0 0 6px rgba(0,229,255,0.7); }
+.segbar.pr-upbar i.f { box-shadow: 0 0 8px rgba(0,229,255,0.85); }
+.st-v.pr-upv { color: var(--cyan); text-shadow: 0 0 10px rgba(0,229,255,0.6); }
 
 .pr-wallet { position: absolute; top: 26px; right: 104px; padding: 8px 14px; border-radius: 6px; background: rgba(8,5,18,0.7); border: 1px solid var(--line-2); font-size: 16px; z-index: 3; }
 .pr-lockrow { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; padding: 8px 10px; border-radius: 4px; background: rgba(255,212,0,0.08); border: 1px dashed rgba(255,212,0,0.45); font-size: 13px; }
@@ -184,6 +188,7 @@ export class ProgressUI {
     const colOk = this.pr.colorOwned(g.color);
     el.classList.toggle('pr-locked', !carOk);
     el.querySelectorAll('.sw').forEach((b) => b.classList.toggle('pr-lk', !this.pr.colorOwned(+b.dataset.c)));
+    this.showTunedStats(el, g.type);
     let row = null;
     if (!carOk) {
       const price = this.pr.carPrice(g.type);
@@ -196,6 +201,27 @@ export class ProgressUI {
       row = this.lockRow(`Цвет «${CAR_COLORS[g.color].name}» · ${money(COLOR_PRICE)}`, COLOR_PRICE, () => this.pr.buyColor(g.color));
     }
     if (row) (el.querySelector('.gp-desc') || el.querySelector('.gp-car')).after(row);
+  }
+
+  /** Speed / acceleration bars include the bought tuning (extra segments + value in cyan). */
+  showTunedStats(el, type) {
+    const t = CAR_TYPES[type];
+    const lvE = this.pr.level(type, 'eng'), lvA = this.pr.level(type, 'acc');
+    // the same formulas the race uses (Car.topSpeed / accel), mapped back onto the 0..1 stat scale
+    const top = (CAR.BASE_TOP_SPEED + CAR.TOP_SPEED_RANGE * t.speed) * (1 + UPGRADES[0].step * lvE);
+    const acc = (CAR.BASE_ACCEL + CAR.ACCEL_RANGE * t.accel) * (1 + UPGRADES[1].step * lvA);
+    const eff = [(top - CAR.BASE_TOP_SPEED) / CAR.TOP_SPEED_RANGE, (acc - CAR.BASE_ACCEL) / CAR.ACCEL_RANGE];
+    const base = [t.speed, t.accel];
+    const bars = el.querySelectorAll('.stats .segbar'), vals = el.querySelectorAll('.stats .st-v');
+    for (let k = 0; k < 2; k++) {
+      if (!bars[k] || !vals[k] || eff[k] <= base[k] + 1e-6) continue;
+      const n0 = Math.round(Math.min(1, base[k]) * 10), n1 = Math.round(Math.min(1, eff[k]) * 10);
+      bars[k].querySelectorAll('i').forEach((seg, i) => { if (i >= n0 && i < n1) seg.className = 'f pr-upseg'; });
+      if (n1 === n0) bars[k].classList.add('pr-upbar'); // already full: glow the whole bar instead
+      vals[k].textContent = Math.round(eff[k] * 100);
+      vals[k].classList.add('pr-upv');
+      vals[k].title = `Базово ${Math.round(base[k] * 100)} · тюнинг +${Math.round((eff[k] - base[k]) * 100)}`;
+    }
   }
 
   lockRow(text, price, buy) {
