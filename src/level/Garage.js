@@ -3,6 +3,7 @@ import { buildCarModel, disposeCarModel } from '../gameplay/CarModel.js';
 import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { disposeTree } from './Environment.js';
 import { tidyModel } from '../gameplay/LightTrails.js';
+import { GLOWS } from '../core/Progress.js';
 
 let poolTex = null;
 /** Smooth radial gradient (large, linear-filtered: no banding or speckles on phone screens). */
@@ -129,7 +130,9 @@ export class Garage {
     if (m.shadow) m.shadow.visible = false;
     this.platforms[p].plat.add(m.root);
     this.platforms[p].ring.material.color.setHex(color).multiplyScalar(2.5);
-    this.platforms[p].pool.material.color.copy(poolColor(color));
+    const glow = GLOWS[g.glow ?? 0];
+    this.platforms[p].pool.material.color.copy(poolColor(glow?.hex ?? color));
+    this.platforms[p].rainbow = !!glow?.rainbow;
     this.models[p] = m;
     this.pop = 0.25;
   }
@@ -137,8 +140,9 @@ export class Garage {
   update(dt) {
     this.time += dt;
     this.pop = Math.max(0, (this.pop || 0) - dt);
-    this.platforms.forEach(({ plat }, i) => {
+    this.platforms.forEach(({ plat, pool, rainbow }, i) => {
       plat.rotation.y = this.time * 0.45 + i * Math.PI;
+      if (rainbow) pool.material.color.setHSL((this.time * 0.25) % 1, 1, 0.5).multiplyScalar(0.7);
       const m = this.models[i];
       if (m) {
         m.wheels.forEach((w) => { w.spin.rotation.x += dt * 2; });
