@@ -1,6 +1,8 @@
 import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
-import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD } from '../core/Progress.js';
+import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD, GLOWS } from '../core/Progress.js';
+
+export const VERSION = 'v3.5';
 import { UI_ICONS } from './Icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -23,6 +25,29 @@ const CSS = `
 .pr-m .pr-bar b { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); }
 .pr-m.done .pr-bar b { background: var(--green); }
 .pr-m .pr-n { grid-column: 2 / 4; font-family: var(--f-mono); font-size: 10px; color: var(--muted); margin-top: -2px; }
+/* driver level */
+.pr-lvl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; margin-bottom: 10px; }
+.pr-lvl b { grid-row: 1 / 3; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; font-family: var(--f-display); font-weight: 900; font-size: 17px; color: #120a00; background: conic-gradient(var(--gold) var(--p), rgba(255,255,255,0.12) 0); box-shadow: 0 0 14px rgba(255,212,0,0.4); position: relative; }
+.pr-lvl b::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: linear-gradient(160deg, #ffe14d, #ffb000); z-index: 0; }
+.pr-lvl b span { position: relative; z-index: 1; }
+.pr-lvl .pr-rank { font-weight: 800; font-size: 14px; letter-spacing: 0.02em; }
+.pr-lvl small { font-family: var(--f-mono); font-size: 10px; color: var(--muted); }
+/* underglow picker */
+.pr-glows { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pr-glow { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.18); background: var(--g); cursor: pointer; padding: 0; position: relative; box-shadow: 0 0 8px var(--g); }
+.pr-glow.auto { background: conic-gradient(from 45deg, #444 0 25%, #888 0 50%, #444 0 75%, #888 0); box-shadow: none; }
+.pr-glow.rainbow { background: conic-gradient(#ff2bd6, #ffd400, #39ff88, #00e5ff, #8a5cff, #ff2bd6); }
+.pr-glow.on { border-color: #fff; box-shadow: 0 0 0 2px var(--ink, #07040f), 0 0 12px var(--g); }
+.pr-glow.lk { opacity: 0.3; cursor: default; box-shadow: none; }
+.pr-glow.lk::after { content: attr(data-l); position: absolute; inset: 0; display: grid; place-items: center; font: 700 8px var(--f-mono); color: #fff; }
+/* results: xp + level up */
+.pr-xp { flex-basis: 100%; display: flex; align-items: center; gap: 10px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.pr-xp i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.pr-xp i u { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width 1.2s ease 0.4s; }
+.pr-xp b { color: var(--text); }
+.pr-lvup { flex-basis: 100%; padding: 6px 10px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,212,0,0.35), rgba(255,43,214,0.25)); color: #fff; font-weight: 800; font-size: 13px; letter-spacing: 0.02em; animation: prPop 0.6s cubic-bezier(.2,1.6,.4,1) both 0.6s; }
+.pr-lvup em { font-style: normal; color: var(--gold); }
+@keyframes prPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
 /* Legend row: gold accent */
 .pr-m.pr-leg { border-top: 1px solid rgba(255,212,0,0.35); background: linear-gradient(90deg, rgba(255,212,0,0.1), transparent); margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
 .pr-m.pr-leg i { border-color: var(--gold); box-shadow: 0 0 8px rgba(255,212,0,0.6); }
@@ -68,6 +93,13 @@ const CSS = `
 body.touch-ui .pr-panel { right: max(14px, env(safe-area-inset-right)); top: 76px; transform: none; width: 286px; padding: 10px 12px 8px; animation-name: prInT; }
 @keyframes prInT { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
 body.touch-ui .pr-m { padding: 5px 0; }
+body.touch-ui .pr-panel { top: 66px; }
+body.touch-ui .pr-m .pr-n { display: none; }
+body.touch-ui .pr-lvl { margin-bottom: 4px; }
+body.touch-ui .pr-lvl b { width: 30px; height: 30px; font-size: 14px; }
+body.touch-ui .pr-lvl .pr-rank { font-size: 13px; }
+body.touch-ui .pr-panel .pr-head { margin-bottom: 4px; }
+body.touch-ui .pr-lvup { font-size: 12px; padding: 4px 8px; }
 body.touch-ui .pr-m .pr-t { font-size: 12px; }
 body.touch-ui .pr-panel .pr-head .pr-cr { font-size: 17px; }
 body.touch-ui .pr-tune { right: max(10px, env(safe-area-inset-right)); top: 62px; transform: none; width: 230px; padding: 8px 10px; }
@@ -110,6 +142,7 @@ export class ProgressUI {
     eventBus.on(Events.GARAGE_CHANGED, () => this.renderTune());
     eventBus.on('progress:mission', () => { if (menus.current === 'title') this.renderTitle(); });
     this.renderTitle();
+    document.querySelectorAll('.logo-rule b, .tb-ver b').forEach((e) => { e.textContent = VERSION; });
   }
 
   // ---------------------------------------------------------------- title
@@ -117,7 +150,9 @@ export class ProgressUI {
     const list = this.pr.missions();
     const done = list.filter((m) => m.done).length;
     const bonus = this.pr.data.daily.bonus;
+    const lv = this.pr.levelInfo();
     this.panel.innerHTML = `
+      <div class="pr-lvl" style="--p:${Math.round((lv.xp / lv.need) * 100)}%"><b><span>${lv.level}</span></b><span class="pr-rank">Уровень ${lv.level} · ${lv.rank}</span><small>${lv.xp} / ${lv.need} XP · до нового уровня ${lv.need - lv.xp}</small></div>
       <div class="pr-head"><span>Задания дня · ${done}/${list.length}</span><b class="pr-cr">${money(this.pr.credits)}</b></div>
       ${list.map((m) => `
         <div class="pr-m${m.done ? ' done' : ''}"><i></i><span class="pr-t">${m.text}</span><span class="pr-rw">+${m.reward}</span>
@@ -186,8 +221,24 @@ export class ProgressUI {
       return `<div class="pr-up"><span class="pr-un">${u.name}</span><button class="pr-buy" data-up="${u.id}"${can ? '' : ' disabled'}>${label}</button>
         <span class="pr-pips">${Array.from({ length: MAX_LEVEL }, (_, i) => `<i class="${i < lv ? 'f' : ''}"></i>`).join('')}</span><span class="pr-ue">${lv ? eff : u.short}</span></div>`;
     }).join('');
+    const gsel = this.gs.garage[0].glow ?? 0;
+    const glows = GLOWS.map((g, i) => {
+      const ok = this.pr.glowUnlocked(i);
+      const cls = `pr-glow${g.id === 'auto' ? ' auto' : ''}${g.rainbow ? ' rainbow' : ''}${i === gsel ? ' on' : ''}${ok ? '' : ' lk'}`;
+      const col = g.hex ? '#' + g.hex.toString(16).padStart(6, '0') : '#999';
+      return `<button class="${cls}" data-glow="${i}" data-l="${g.level}" style="--g:${col}" title="${g.name}${ok ? '' : ` · с ${g.level} уровня`}"${ok ? '' : ' disabled'}></button>`;
+    }).join('');
     this.tune.innerHTML = `<h4><span>Тюнинг</span><b class="pr-cr">${money(this.pr.credits)}</b></h4>${rows}
+      <div class="pr-up"><span class="pr-un">Неон-подсветка</span><span class="pr-ue">${GLOWS[gsel].name}</span><span class="pr-glows" style="grid-column:1/3">${glows}</span></div>
       ${owned ? '' : '<div class="pr-note">Сначала купи эту машину</div>'}`;
+    this.tune.querySelectorAll('[data-glow]').forEach((b) => {
+      b.onclick = () => {
+        this.gs.garage[0].glow = +b.dataset.glow;
+        this.gs.saveSettings();
+        eventBus.emit(Events.UI_CLICK);
+        eventBus.emit(Events.GARAGE_CHANGED, { p: 0 });
+      };
+    });
     this.tune.querySelectorAll('[data-up]').forEach((b) => {
       b.onclick = () => { if (this.pr.buyUpgrade(t, b.dataset.up)) { this.renderTune(); this.menus.renderGarage(); } };
     });
@@ -213,7 +264,15 @@ export class ProgressUI {
     const chips = rw.lines.map(([l, n]) => `<span class="pr-chip">${l} <b>+${n}</b></span>`);
     if (rw.legend?.gold) chips.push('<span class="pr-chip pr-gold">Открыт цвет «Золото»</span>');
     if (rw.missions) chips.push(`<span class="pr-chip">Задания <b>+${rw.missions}</b></span>`);
-    box.innerHTML = `<span class="pr-big">+${money(rw.total)}</span>${chips.join('')}<span class="pr-bal">Баланс <b>${money(rw.balance)}</b></span>`;
+    const x = rw.xp;
+    // all level-ups of this race in one line: highest level, last new rank, summed bonus, unlocked underglows
+    const L = x?.ups || [];
+    const rank = L.map((u) => u.rank).filter(Boolean).pop();
+    const glows = L.map((u) => u.glow).filter(Boolean);
+    const ups = L.length ? `<div class="pr-lvup">Новый уровень <em>${L[L.length - 1].level}</em>${rank ? ` · ранг «${rank}»` : ''} · +${money(L.reduce((a, u) => a + u.credits, 0))}${glows.length ? ` · подсветка ${glows.map((g) => `«${g}»`).join(', ')}` : ''}</div>` : '';
+    const xpRow = x ? `<div class="pr-xp"><span>Ур. <b>${x.level}</b> · ${x.rank}</span><i><u style="width:0%"></u></i><span>+${x.gain} XP</span></div>` : '';
+    box.innerHTML = `<span class="pr-big">+${money(rw.total)}</span>${chips.join('')}<span class="pr-bal">Баланс <b>${money(rw.balance)}</b></span>${xpRow}${ups}`;
     body.prepend(box);
+    if (x) requestAnimationFrame(() => requestAnimationFrame(() => { const u = box.querySelector('.pr-xp u'); if (u) u.style.width = `${Math.round((x.xp / x.need) * 100)}%`; }));
   }
 }

@@ -14,6 +14,21 @@ export const COLOR_PRICE = 200; // colours 0..3 are free
 export const FREE_COLORS = 4;
 export const GOLD_INDEX = CAR_COLORS.findIndex((c) => c.name === 'Золото');
 export const LEGEND_REWARD = 400;
+// Underglow (neon kit) colours, unlocked by driver level. 'auto' = same as the paint.
+export const GLOWS = [
+  { id: 'auto', name: 'Как кузов', level: 1 },
+  { id: 'cyan', name: 'Циан', hex: 0x00e5ff, level: 2 },
+  { id: 'pink', name: 'Маджента', hex: 0xff2bd6, level: 3 },
+  { id: 'green', name: 'Токсик', hex: 0x39ff88, level: 4 },
+  { id: 'gold', name: 'Золото', hex: 0xffc83d, level: 6 },
+  { id: 'white', name: 'Белый неон', hex: 0xe8f4ff, level: 8 },
+  { id: 'rainbow', name: 'Радуга', rainbow: true, level: 10 },
+];
+// Driver ranks by level
+export const RANKS = [[1, 'Новичок'], [3, 'Любитель'], [5, 'Гонщик'], [8, 'Профи'], [12, 'Мастер'], [16, 'Чемпион'], [22, 'Легенда трасс']];
+export const xpForLevel = (n) => 300 + 150 * (n - 1); // XP to go from level n to n+1
+export const rankOf = (lvl) => RANKS.filter(([l]) => lvl >= l).pop()[1];
+
 export const UPGRADES = [
   { id: 'eng', name: 'Двигатель', short: 'макс. скорость', step: 0.03, unit: '%' },
   { id: 'acc', name: 'Турбина', short: 'разгон', step: 0.08, unit: '%' },
@@ -63,6 +78,8 @@ export class Progress {
     this.gs = gameState;
     const fresh = { credits: START_CREDITS, cars: ['comet', 'spark'], colors: [0, 1, 2, 3], upg: {}, daily: null, stats: { races: 0, wins: 0, earned: 0 } };
     this.data = Object.assign(fresh, loadJSON('neonrush.progress', {}));
+    this.data.xp ??= 0;
+    this.data.level ??= 1;
     this.ensureDaily();
     this.fixGarage();
     this.session = null;
@@ -110,12 +127,36 @@ export class Progress {
     return true;
   }
 
+  // ---------------------------------------------------------------- driver level
+  levelInfo() {
+    const lvl = this.data.level;
+    return { level: lvl, xp: this.data.xp, need: xpForLevel(lvl), rank: rankOf(lvl) };
+  }
+  glowUnlocked(i) { return (GLOWS[i]?.level ?? 99) <= this.data.level; }
+  /** Adds XP; returns the level-ups (each pays credits and may unlock an underglow). */
+  addXP(n) {
+    this.data.xp += n;
+    const ups = [];
+    while (this.data.xp >= xpForLevel(this.data.level)) {
+      this.data.xp -= xpForLevel(this.data.level);
+      this.data.level++;
+      const lvl = this.data.level;
+      const credits = 100 * lvl;
+      this.data.credits += credits;
+      const glow = GLOWS.find((g) => g.level === lvl);
+      const rank = RANKS.find(([l]) => l === lvl)?.[1] || null;
+      ups.push({ level: lvl, credits, glow: glow?.name || null, rank });
+    }
+    return ups;
+  }
+
   /** Saved selections that are no longer owned (first launch of this version) fall back to free ones. */
   fixGarage() {
     const free = CAR_TYPES.map((t, i) => i).filter((i) => this.carOwned(i));
     this.gs.garage.forEach((g, p) => {
       if (!this.carOwned(g.type)) g.type = free[p % free.length];
       if (!this.colorOwned(g.color)) g.color = p % FREE_COLORS;
+      if (!this.glowUnlocked(g.glow ?? 0)) g.glow = 0;
     });
     if (this.gs.garage[1] && this.gs.garage[1].color === this.gs.garage[0].color) this.gs.garage[1].color = (this.gs.garage[0].color + 1) % FREE_COLORS;
     this.gs.saveSettings();
@@ -128,6 +169,10 @@ export class Progress {
       car.topMult = 1 + UPGRADES[0].step * this.level(t, 'eng');
       car.accelMult = 1 + UPGRADES[1].step * this.level(t, 'acc');
       car.nitro = Math.min(100, car.nitro + UPGRADES[2].step * this.level(t, 'nit'));
+      // neon kit
+      const glow = GLOWS[this.gs.garage[car.player]?.glow ?? 0];
+      if (glow?.hex && car.model.glow) car.model.glow.material.color.setHex(glow.hex).multiplyScalar(0.85);
+      car.rainbowGlow = !!glow?.rainbow;
     });
   }
 
@@ -234,7 +279,7 @@ export class Progress {
     if (clean) lines.push(['Без ударов о стены', BONUS.cleanRace]);
     if (res.record) lines.push(['Новый рекорд трассы', BONUS.bestLap]);
     let legend = null;
-    if (s.legend && me) {
+    if (s.legend && me && !this.data.daily.legend) {
       const boss = res.rows.find((r) => r.name === 'Легенда');
       if (boss && me.place < boss.place && !me.eliminated) {
         this.data.daily.legend = true;
@@ -257,8 +302,10 @@ export class Progress {
       if (pod && me.place <= 3 && st.mode === 'gp' && TRACKS[pod.track]?.name === res.track) this.bump('podium');
       if (clean) this.bump('clean');
     }
+    const xpGain = earned + s.missions;
+    const ups = this.addXP(xpGain);
     this.session = null;
     this.save();
-    return { lines, earned, missions: s.missions, total: earned + s.missions, balance: this.data.credits, legend };
+    return { lines, earned, missions: s.missions, total: earned + s.missions, balance: this.data.credits, legend, xp: { gain: xpGain, ups, ...this.levelInfo() } };
   }
 }

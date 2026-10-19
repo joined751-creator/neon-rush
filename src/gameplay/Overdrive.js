@@ -157,6 +157,7 @@ export class OverdriveFX {
         const s = 1 + it.level * 0.35;
         glow.scale.set(it.glowBase.s.x * s, it.glowBase.s.y * s, 1);
         if (it.level > 0.01) glow.material.color.setHSL((this.time * 0.9) % 1, 1, 0.5).multiplyScalar(0.6 + it.level * 0.6);
+        else if (car.rainbowGlow) glow.material.color.setHSL((this.time * 0.3) % 1, 1, 0.5).multiplyScalar(0.7);
         else glow.material.color.copy(it.glowBase.c);
       }
       // warp FOV + speed FX

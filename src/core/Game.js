@@ -120,7 +120,10 @@ export class Game {
     if (this.gp) this.gp.roster = this.race.roster;
     this.progress.applyToRace(this.race);
     this.progress.beginRace(this.race);
-    if (this.race.mode !== 'trial' && this.progress.legendActive() && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
+    // the Legend stays for a whole Grand Prix once it has started in it (keeps the standings consistent)
+    if (newGP && this.gp) this.gp.legend = this.progress.legendActive();
+    const legendOn = this.gp ? this.gp.legend : this.progress.legendActive();
+    if (this.race.mode !== 'trial' && legendOn && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
     this.odfx.attach(this.race);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();
