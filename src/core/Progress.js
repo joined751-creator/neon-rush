@@ -12,6 +12,8 @@ export const START_CREDITS = 600;
 export const CAR_PRICE = { comet: 0, spark: 0, titan: 900, viper: 1500 };
 export const COLOR_PRICE = 200; // colours 0..3 are free
 export const FREE_COLORS = 4;
+export const GOLD_INDEX = CAR_COLORS.findIndex((c) => c.name === 'Золото');
+export const LEGEND_REWARD = 400;
 export const UPGRADES = [
   { id: 'eng', name: 'Двигатель', short: 'макс. скорость', step: 0.03, unit: '%' },
   { id: 'acc', name: 'Турбина', short: 'разгон', step: 0.08, unit: '%' },
@@ -91,8 +93,9 @@ export class Progress {
     if (this.carOwned(typeIndex) || !this.spend(this.carPrice(typeIndex))) return false;
     this.data.cars.push(CAR_TYPES[typeIndex].id); this.save(); return true;
   }
+  colorPrice(c) { return c === GOLD_INDEX ? null : COLOR_PRICE; }
   buyColor(c) {
-    if (this.colorOwned(c) || !this.spend(COLOR_PRICE)) return false;
+    if (this.colorOwned(c) || this.colorPrice(c) == null || !this.spend(COLOR_PRICE)) return false;
     this.data.colors.push(c); this.save(); return true;
   }
 
@@ -144,6 +147,10 @@ export class Progress {
     this.data.daily = { date: d, list, bonus: false };
     this.save();
   }
+  /** The daily boss rival races until the player beats it once that day. */
+  legendActive() { this.ensureDaily(); return !this.data.daily.legend; }
+  goldOwned() { return this.data.colors.includes(GOLD_INDEX); }
+
   missions() {
     this.ensureDaily();
     return this.data.daily.list.map((e) => ({ ...e, text: MISSIONS.find((m) => m.id === e.id).text(e) }));
@@ -226,6 +233,16 @@ export class Progress {
     const clean = finished && s.walls === 0;
     if (clean) lines.push(['Без ударов о стены', BONUS.cleanRace]);
     if (res.record) lines.push(['Новый рекорд трассы', BONUS.bestLap]);
+    let legend = null;
+    if (s.legend && me) {
+      const boss = res.rows.find((r) => r.name === 'Легенда');
+      if (boss && me.place < boss.place && !me.eliminated) {
+        this.data.daily.legend = true;
+        lines.push(['Победа над Легендой', LEGEND_REWARD]);
+        legend = { gold: !this.goldOwned() };
+        if (legend.gold) this.data.colors.push(GOLD_INDEX);
+      } else legend = { lost: true };
+    }
     const earned = lines.reduce((a, l) => a + l[1], 0);
     this.data.credits += earned;
     this.data.stats.earned += earned;
@@ -242,6 +259,6 @@ export class Progress {
     }
     this.session = null;
     this.save();
-    return { lines, earned, missions: s.missions, total: earned + s.missions, balance: this.data.credits };
+    return { lines, earned, missions: s.missions, total: earned + s.missions, balance: this.data.credits, legend };
   }
 }
