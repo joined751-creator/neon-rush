@@ -2,7 +2,7 @@ import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD, GLOWS } from '../core/Progress.js';
 
-export const VERSION = 'v3.5';
+export const VERSION = 'v3.6';
 import { UI_ICONS } from './Icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -109,6 +109,12 @@ body.touch-ui .pr-wallet { top: 14px; right: 84px; font-size: 14px; padding: 6px
 body.touch-ui .pr-toast { bottom: 70px; }
 body.touch-ui .pr-reward { padding: 6px 10px; margin-bottom: 8px; }
 body.touch-ui .pr-reward .pr-big { font-size: 20px; }
+/* short (phone) screens: results buttons stay pinned at the bottom instead of hiding below the fold */
+@media (max-height: 560px) {
+  #screen-results .panel-foot { position: sticky; bottom: -14px; z-index: 3; margin-top: 8px; padding: 10px 0 12px; background: linear-gradient(180deg, rgba(9,6,20,0.7), rgba(9,6,20,0.97) 40%); }
+  .pr-reward .pr-chip { font-size: 10px; padding: 1px 6px; }
+  .pr-reward { gap: 4px 6px; }
+}
 body.portrait .pr-panel { position: relative; right: auto; top: auto; width: auto; margin: 12px 0 0; }
 body.portrait .pr-tune { display: none; }
 @media (max-width: 760px) and (pointer: fine) { .pr-panel, .pr-tune { display: none; } }
