@@ -46,16 +46,18 @@ export const CAR = {
   TURN_RATE: 1.9, // rad/s at full lock
   HANDLING_RANGE: 0.9,
   GRIP: 8.5,
-  DRIFT_GRIP: 6.6, // was 5.2 (1.4 before that): less sideways slide, the car goes where it points
+  DRIFT_GRIP: 3.9, // momentum carries the car outward: start the slide early and hold the line with the stick
   DRIFT_MIN_SPEED: 16,
   DRIFT_MIN_STEER: 0.3,
   DRIFT_TURN: 1.18, // yaw multiplier at full lock while drifting
   DRIFT_YAW_BIAS: 0.3, // drift yaw share with the stick centred (gentle arc)
   DRIFT_YAW_GAIN: 0.7, // stick authority: full lock → 1.0, full counter-steer → -0.4 (straightens out)
-  DRIFT_WALL_ASSIST: 5, // m from the wall where a human's slide is gently pulled back onto the road
+  DRIFT_WALL_ASSIST: 3, // m from the wall where a human's slide is gently pulled back onto the road
   DRIFT_EXIT_TIME: 0.4, // seconds of hard counter-steer that straighten the car out of a slide
-  DRIFT_DRAG: 0.035, // gentle speed bleed while sliding
-  DRIFT_LEVELS: [0.55, 1.25, 2.1],
+  DRIFT_DRAG: 0.06, // speed bleed while sliding (a drift costs speed, the boost pays it back)
+  DRIFT_ANGLE_DRAG: 0.06, // extra bleed for a tight (full-lock) slide
+  DRIFT_WALL_BREAK: 4.5, // wall impact (m/s) that kills the slide and its boost
+  DRIFT_LEVELS: [0.7, 1.5, 2.45],
   DRIFT_BOOST_TIME: [0.55, 1.0, 1.6],
   DRIFT_VISUAL_ANGLE: 0.38,
   BOOST_ACCEL: 30,
