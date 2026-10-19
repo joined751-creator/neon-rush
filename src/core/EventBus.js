@@ -24,6 +24,7 @@ export const Events = {
   CAR_SLIPSTREAM: 'car:slipstream',
   CAR_NEARMISS: 'car:nearMiss',
   CAR_OVERTAKE: 'car:overtake',
+  CAR_OVERDRIVE: 'car:overdrive',
 
   // Items
   ITEM_PICKUP: 'item:pickup',
