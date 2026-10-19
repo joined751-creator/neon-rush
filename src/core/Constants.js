@@ -110,6 +110,7 @@ export const CAR_COLORS = [
   { name: 'Фиалка', hex: 0x8a5cff },
   { name: 'Лёд', hex: 0xe8f4ff },
   { name: 'Рубин', hex: 0xff2244 },
+  { name: 'Золото', hex: 0xffc83d }, // reward for beating the Legend (never given to bots)
 ];
 
 export const AI_NAMES = ['Вольт', 'Фантом', 'Рысь', 'Блиц', 'Кобра', 'Гроза', 'Сокол', 'Мираж'];

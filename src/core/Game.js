@@ -15,6 +15,7 @@ import { setupPWA } from '../systems/PWA.js';
 import { Progress } from './Progress.js';
 import { ProgressUI } from '../ui/ProgressUI.js';
 import { OverdriveFX } from '../gameplay/Overdrive.js';
+import { setupLegend } from '../gameplay/Legend.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -119,6 +120,7 @@ export class Game {
     if (this.gp) this.gp.roster = this.race.roster;
     this.progress.applyToRace(this.race);
     this.progress.beginRace(this.race);
+    if (this.race.mode !== 'trial' && this.progress.legendActive() && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
     this.odfx.attach(this.race);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();
