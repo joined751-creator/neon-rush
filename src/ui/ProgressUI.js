@@ -1,6 +1,6 @@
 import { CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
-import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE } from '../core/Progress.js';
+import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD } from '../core/Progress.js';
 import { UI_ICONS } from './Icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -23,6 +23,11 @@ const CSS = `
 .pr-m .pr-bar b { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--pink)); }
 .pr-m.done .pr-bar b { background: var(--green); }
 .pr-m .pr-n { grid-column: 2 / 4; font-family: var(--f-mono); font-size: 10px; color: var(--muted); margin-top: -2px; }
+/* Legend row: gold accent */
+.pr-m.pr-leg { border-top: 1px solid rgba(255,212,0,0.35); background: linear-gradient(90deg, rgba(255,212,0,0.1), transparent); margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.pr-m.pr-leg i { border-color: var(--gold); box-shadow: 0 0 8px rgba(255,212,0,0.6); }
+.pr-m.pr-leg .pr-t b { color: var(--gold); }
+.pr-reward .pr-chip.pr-gold { background: linear-gradient(90deg, #ffe14d, #ffb000); color: #120a00; font-weight: 700; }
 .pr-foot { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--muted); padding-top: 8px; border-top: 1px solid var(--line); }
 .pr-foot b { color: var(--gold); }
 #screen-title .title-badge { display: none; }
@@ -118,7 +123,15 @@ export class ProgressUI {
         <div class="pr-m${m.done ? ' done' : ''}"><i></i><span class="pr-t">${m.text}</span><span class="pr-rw">+${m.reward}</span>
           <span class="pr-bar"><b style="width:${Math.round((m.prog / m.target) * 100)}%"></b></span>
           ${m.target > 1 ? `<span class="pr-n">${m.prog} / ${m.target}</span>` : ''}</div>`).join('')}
+      ${this.legendRow()}
       <div class="pr-foot">${bonus ? 'Все задания выполнены — новые завтра' : `Все три — бонус <b>+300 ${CURRENCY}</b> · новые каждый день`}</div>`;
+  }
+
+  legendRow() {
+    const beaten = !this.pr.legendActive();
+    const gold = this.pr.goldOwned();
+    return `<div class="pr-m pr-leg${beaten ? ' done' : ''}"><i></i><span class="pr-t">${beaten ? 'Легенда побеждена — новая завтра' : 'Обгони <b>Легенду</b> — золотую машину в гонке'}</span><span class="pr-rw">+${LEGEND_REWARD}</span>
+      <span class="pr-n">${gold ? 'Золотая краска уже твоя' : 'Первая победа открывает золотую краску'}</span></div>`;
   }
 
   // ---------------------------------------------------------------- garage
@@ -134,6 +147,10 @@ export class ProgressUI {
     if (!carOk) {
       const price = this.pr.carPrice(g.type);
       row = this.lockRow(`Машина закрыта · <b>${money(price)}</b>`, price, () => this.pr.buyCar(g.type));
+    } else if (!colOk && this.pr.colorPrice(g.color) == null) {
+      row = document.createElement('div');
+      row.className = 'pr-lockrow';
+      row.innerHTML = `${UI_ICONS.lock}<span>«${CAR_COLORS[g.color].name}» — награда за победу над <b>Легендой</b></span>`;
     } else if (!colOk) {
       row = this.lockRow(`Цвет «${CAR_COLORS[g.color].name}» · ${money(COLOR_PRICE)}`, COLOR_PRICE, () => this.pr.buyColor(g.color));
     }
@@ -194,6 +211,7 @@ export class ProgressUI {
     const box = document.createElement('div');
     box.className = 'pr-reward';
     const chips = rw.lines.map(([l, n]) => `<span class="pr-chip">${l} <b>+${n}</b></span>`);
+    if (rw.legend?.gold) chips.push('<span class="pr-chip pr-gold">Открыт цвет «Золото»</span>');
     if (rw.missions) chips.push(`<span class="pr-chip">Задания <b>+${rw.missions}</b></span>`);
     box.innerHTML = `<span class="pr-big">+${money(rw.total)}</span>${chips.join('')}<span class="pr-bal">Баланс <b>${money(rw.balance)}</b></span>`;
     body.prepend(box);
