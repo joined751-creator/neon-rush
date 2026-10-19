@@ -45,6 +45,9 @@ body.touch-ui.portrait .phud .h-launch { top: 230px; bottom: auto; }
 .ft span { text-shadow: none; }
 .ft.bump { animation: ftBump 2.3s var(--ease) forwards; }
 @keyframes ftBump { 0% { opacity: 1; transform: scale(1.12); } 8% { transform: none; } 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(16px); } }
+/* drift about to over-rotate */
+.drift-m.slip { --dc: #ff4060 !important; }
+.drift-m.slip .ml b { animation: lz-blink 0.3s steps(2) infinite; }
 /* place label stays readable while the big digit animates */
 .h-pos .h-lbl { position: relative; z-index: 1; }
 .compact .h-banner { top: 10px; }
