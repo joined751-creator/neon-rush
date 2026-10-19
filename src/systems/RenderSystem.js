@@ -44,6 +44,23 @@ const SpeedShader = {
     }`,
 };
 
+/**
+ * Guard before bloom: a mirror-sharp highlight can overflow the half-float buffer (Inf/NaN). Bloom then spread that
+ * one pixel into a glowing white square with a black dot in the middle. Clamp it to a bright-but-finite value.
+ */
+const SanitizeShader = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec3 x = min(c.rgb, vec3(24.0));
+      if (any(isnan(x))) x = vec3(0.0);
+      gl_FragColor = vec4(max(x, vec3(0.0)), 1.0);
+    }`,
+};
+
 /** Renders several camera viewports into the composer's read buffer. */
 class SplitRenderPass extends Pass {
   constructor(scene, getViews) {
@@ -95,6 +112,7 @@ export class RenderSystem {
     this.splitPass = new SplitRenderPass(scene, () => this.views);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.5, 0.78);
     this.composer.addPass(this.splitPass);
+    this.composer.addPass(new ShaderPass(SanitizeShader));
     this.composer.addPass(this.bloom);
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);

@@ -148,7 +148,8 @@ function buildEnvMap(renderer, theme) {
     m.lookAt(0, 0, 0);
     s.add(m);
   };
-  panel(0xffffff, 2.2, 14, 3, 0, 10, 0);
+  // overhead softbox: dimmer and larger (a hot 14×3 strip mirrored on car roofs as a glaring white square)
+  panel(0xffffff, 1.15, 18, 6, 0, 10, 0.5);
   panel(theme.wall, 3, 20, 2, -10, 2, 0);
   panel(theme.wall2, 3, 20, 2, 10, 2, 0);
   panel(theme.skyHorizon, 2, 30, 4, 0, 1, -12);

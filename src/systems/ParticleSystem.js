@@ -13,7 +13,7 @@ const VERT = /* glsl */`
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     float z = -mv.z;
     // fade + clamp near the camera so close particles never become huge blurry blobs
-    vAlpha *= smoothstep(1.5, 6.0, z);
+    vAlpha *= smoothstep(2.0, 7.0, z);
     gl_PointSize = min(aSize * uScale / max(0.5, z), uScale * 0.12);
     gl_Position = projectionMatrix * mv;
   }
@@ -26,7 +26,9 @@ const FRAG = /* glsl */`
     vec2 c = gl_PointCoord - 0.5;
     float d = length(c) * 2.0;
     if (d > 1.0) discard;
-    float a = mix(1.0 - d, pow(1.0 - d, 0.5), uSoft);
+    // sparks: hot core with a quick falloff (reads as a point of light, not a fuzzy disc); smoke stays soft
+    float k = 1.0 - d;
+    float a = mix(min(1.0, k * k * 1.7), k * k * (3.0 - 2.0 * k), uSoft); // smoke: feathered edge, no visible disc rim
     gl_FragColor = vec4(vColor, a * vAlpha);
   }
 `;
