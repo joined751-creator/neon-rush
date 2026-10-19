@@ -154,8 +154,8 @@ export class Car {
       if (this.empTime > 0) vF *= Math.exp(-0.8 * dt);
       if (holding) vF *= Math.exp(-6 * dt);
 
-      // Drift state machine (arcade "power slide"): the body swings out visually, but the physics stays
-      // grippy and the line is steered with the stick — full lock tightens, counter-steer widens.
+      // Drift state machine (power slide): the tail steps out and momentum carries the car wide, so the slide
+      // has to be started early; the stick steers it — full lock tightens, counter-steer widens.
       if (can && c.drift && !this.drifting && Math.abs(steer) > CAR.DRIFT_MIN_STEER && vF > CAR.DRIFT_MIN_SPEED) {
         this.drifting = true; this.driftDir = Math.sign(steer); this.driftTime = 0; this.driftLevel = 0; this.hop = 0.18;
         this.counterTime = 0;
@@ -171,8 +171,9 @@ export class Car {
         const tight = this.driftDir * steer; // -1..1
         const amount = CAR.DRIFT_YAW_BIAS + CAR.DRIFT_YAW_GAIN * tight; // -0.4..1: the stick steers the slide
         yawRate = this.driftDir * CAR.TURN_RATE * CAR.DRIFT_TURN * handling * amount * speedFactor;
-        vF -= vF * CAR.DRIFT_DRAG * dt;
-        this.driftTime += dt * (0.75 + 0.5 * Math.max(0, tight));
+        vF -= vF * (CAR.DRIFT_DRAG + CAR.DRIFT_ANGLE_DRAG * Math.max(0, tight)) * dt;
+        // the slide builds only on the throttle: lifting off lets the drift die down
+        this.driftTime += dt * (0.75 + 0.5 * Math.max(0, tight)) * (0.3 + 0.7 * throttle);
         const lvl = CAR.DRIFT_LEVELS.filter((t) => this.driftTime >= t).length;
         if (lvl > this.driftLevel) {
           this.driftLevel = lvl;
@@ -233,7 +234,7 @@ export class Car {
           const trackH = Math.abs(angleDiff(this.heading, q.heading)) < Math.PI / 2 ? q.heading : q.heading + Math.PI;
           this.heading += angleDiff(trackH, this.heading) * Math.min(0.5, vn * 0.03);
         }
-        if (this.drifting && vn > 7) { this.drifting = false; this.driftTime = 0; this.driftLevel = 0; }
+        if (this.drifting && vn > CAR.DRIFT_WALL_BREAK) { this.drifting = false; this.driftTime = 0; this.driftLevel = 0; }
       }
       this.scraping = true;
     } else this.scraping = false;
@@ -330,8 +331,8 @@ export class Car {
     // (heading -= yawRate·dt, so a positive yawRate swings the nose towards the track's right)
     const into = (fx * q.rx + fz * q.rz) * side * Math.sign(vF || 1);
     if (into > 0.05) {
-      if (yawRate * side > 0) yawRate *= 1 - w * 0.8;
-      yawRate -= side * w * 1.3 * Math.min(1, into * 3);
+      if (yawRate * side > 0) yawRate *= 1 - w * 0.6;
+      yawRate -= side * w * 0.9 * Math.min(1, into * 3);
     }
     return [vF, vR, yawRate];
   }
@@ -355,7 +356,8 @@ export class Car {
     m.root.rotation.order = 'YXZ';
     m.root.rotation.set(this.visPitch, this.heading, 0);
 
-    const targetDrift = this.drifting ? this.driftDir * CAR.DRIFT_VISUAL_ANGLE : 0;
+    // body angle follows the real sideways slip: a deep slide looks deep, a shallow one shallow
+    const targetDrift = this.drifting ? this.driftDir * CAR.DRIFT_VISUAL_ANGLE * (0.65 + 0.6 * Math.min(1, Math.abs(this.lateralSpeed) / 7)) : 0;
     this.visDrift += (targetDrift - this.visDrift) * Math.min(1, dt * 7);
     const rollTarget = -this.steerVis * Math.min(1, Math.abs(this.speed) / 40) * 0.06 - (this.drifting ? this.driftDir * 0.05 : 0);
     this.visRoll += (rollTarget - this.visRoll) * Math.min(1, dt * 6);
