@@ -46,6 +46,7 @@ export class Car {
     this.controlEnabled = false;
     this.lateral = 0;
     this.pitchTarget = 0;
+    this.yawVel = 0; this.slip = 0;
   }
 
   placeAt(s, lateral) {
@@ -171,6 +172,21 @@ export class Car {
         const tight = this.driftDir * steer; // -1..1
         const amount = CAR.DRIFT_YAW_BIAS + CAR.DRIFT_YAW_GAIN * tight; // -0.4..1: the stick steers the slide
         yawRate = this.driftDir * CAR.TURN_RATE * CAR.DRIFT_TURN * handling * amount * speedFactor;
+        if (this.human) {
+          // slip angle: how far the nose points into the corner past the direction of travel (tail out > 0)
+          const slip = -this.driftDir * Math.atan2(vR, Math.max(1, vF));
+          this.slip = slip;
+          // oversteer: the tail keeps swinging out on its own (stronger on the throttle) — catch it with the stick
+          yawRate += this.driftDir * CAR.TURN_RATE * CAR.DRIFT_OVERSTEER * (0.35 + 0.65 * throttle) * Math.max(0, slip - CAR.DRIFT_SLIP_FREE) * speedFactor;
+          // the body has inertia in a slide: the yaw follows the stick with a lag
+          this.yawVel += (yawRate - this.yawVel) * Math.min(1, dt * CAR.DRIFT_YAW_RESP);
+          yawRate = this.yawVel;
+          if (slip > CAR.DRIFT_SPIN_ANGLE) {
+            // over-rotated: the slide is lost (no boost) and the car spins
+            this.drifting = false; this.driftTime = 0; this.driftLevel = 0;
+            this.spinOut('drift');
+          }
+        }
         vF -= vF * (CAR.DRIFT_DRAG + CAR.DRIFT_ANGLE_DRAG * Math.max(0, tight)) * dt;
         // the slide builds only on the throttle: lifting off lets the drift die down
         this.driftTime += dt * (0.75 + 0.5 * Math.max(0, tight)) * (0.3 + 0.7 * throttle);
@@ -182,7 +198,9 @@ export class Car {
         this.nitro = Math.min(100, this.nitro + CAR.NITRO_DRIFT_GAIN * dt);
       } else {
         yawRate = steer * CAR.TURN_RATE * handling * speedFactor * Math.sign(vF || 1);
+        this.slip = 0;
       }
+      if (!this.drifting) this.yawVel = yawRate;
 
       let grip = this.drifting ? CAR.DRIFT_GRIP : CAR.GRIP * (0.75 + 0.45 * this.type.handling);
       if (this.spinTime > 0) grip = 0.9;

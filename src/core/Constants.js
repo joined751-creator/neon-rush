@@ -57,6 +57,12 @@ export const CAR = {
   DRIFT_DRAG: 0.06, // speed bleed while sliding (a drift costs speed, the boost pays it back)
   DRIFT_ANGLE_DRAG: 0.06, // extra bleed for a tight (full-lock) slide
   DRIFT_WALL_BREAK: 4.5, // wall impact (m/s) that kills the slide and its boost
+  // players' slides have real oversteer: once the tail is out it keeps coming round (more on the throttle),
+  // the angle has to be held with the stick, and an over-rotated slide ends in a spin
+  DRIFT_OVERSTEER: 1.4, // extra yaw per radian of slip (× turn rate)
+  DRIFT_SLIP_FREE: 0.18, // slip angle (rad) the tyres hold without pushing the tail further
+  DRIFT_SPIN_ANGLE: 1.0, // rad (~57°): past this the car spins out
+  DRIFT_YAW_RESP: 5, // how fast the yaw follows the stick in a slide (lower = heavier, needs anticipation)
   DRIFT_LEVELS: [0.7, 1.5, 2.45],
   DRIFT_BOOST_TIME: [0.55, 1.0, 1.6],
   DRIFT_VISUAL_ANGLE: 0.38,
