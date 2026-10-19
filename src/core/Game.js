@@ -12,6 +12,8 @@ import { HUD } from '../ui/HUD.js';
 import { TRACKS } from '../level/TrackDefs.js';
 import { MobileControls } from '../systems/MobileControls.js';
 import { setupPWA } from '../systems/PWA.js';
+import { Progress } from './Progress.js';
+import { ProgressUI } from '../ui/ProgressUI.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -24,6 +26,8 @@ export class Game {
     this.audio = new AudioBridge(this.gs);
     this.menus = new Menus(this.gs);
     this.hud = new HUD();
+    this.progress = new Progress(this.gs);
+    this.progressUI = new ProgressUI(this.progress, this.menus, this.gs);
     this.garage = null;
     this.race = null;
     this.state = 'menu'; // menu | garage | race | paused | results
@@ -68,6 +72,7 @@ export class Game {
       scene: this.scene, render: this.render, settings: { ...this.gs.settings, track, mirror: false, items: true },
       garage: this.gs.garage, gameState: this.gs, input: this.input, demo: true,
     });
+    this.progress.beginRace(this.race);
     this.state = 'menu';
     this.hud.hide();
     this.audio.setListeners([]);
@@ -109,6 +114,8 @@ export class Game {
       gameState: this.gs, input: this.input, demo: false, roster: this.gp?.roster,
     });
     if (this.gp) this.gp.roster = this.race.roster;
+    this.progress.applyToRace(this.race);
+    this.progress.beginRace(this.race);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
@@ -164,7 +171,9 @@ export class Game {
       }).sort((a, b) => b.pts - a.pts);
       gpInfo = { round: this.gp.round + 1, total: GP.TRACKS.length, standings, last: this.gp.round + 1 >= GP.TRACKS.length };
     }
+    const reward = this.progress.finishRace(res);
     this.menus.showResults(res, this.race.humans.length, gpInfo);
+    this.progressUI.showRewards(reward);
   }
 
   nextRound() {
@@ -180,7 +189,11 @@ export class Game {
     switch (a) {
       case 'garage': this.openGarage(); break;
       case 'menu': this.leaveGarage(); break;
-      case 'start': if (this.state === 'garage') this.startRace({ newGP: true }); break;
+      case 'start':
+        if (this.state !== 'garage') break;
+        if (this.progress.canStart()) this.startRace({ newGP: true });
+        else this.progressUI.flashLocked();
+        break;
       case 'nextRound': this.nextRound(); break;
       case 'restart': this.startRace(); break;
       case 'resume': this.resume(); break;
