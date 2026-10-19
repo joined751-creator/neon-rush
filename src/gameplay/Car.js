@@ -32,7 +32,7 @@ export class Car {
     this.heading = 0; this.vx = 0; this.vz = 0;
     this.speed = 0; this.lateralSpeed = 0;
     this.drifting = false; this.driftDir = 0; this.driftTime = 0; this.driftLevel = 0;
-    this.boostTime = 0; this.nitro = CAR.NITRO_START; this.nitroActive = false;
+    this.boostTime = 0; this.nitro = CAR.NITRO_START; this.nitroActive = false; this.overdrive = 0; this.prevNitroBtn = false;
     this.item = null; this.itemLock = false;
     this.shieldTime = 0; this.spinTime = 0; this.spinDir = 1; this.empTime = 0; this.ghostTime = 0;
     this.airborne = false; this.airTime = 0;
@@ -117,13 +117,22 @@ export class Car {
     if (!can) { throttle = 0; brake = 0; steer = 0; }
     const holding = !this.controlEnabled && !this.finished; // parked on the grid / stalled
 
+    // Overdrive: a full nitro tank fired at once (players only) — a few seconds of ultra speed that rams rivals aside
+    this.overdrive = Math.max(0, (this.overdrive || 0) - dt);
+    if (can && this.human && c.nitro && !this.prevNitroBtn && this.nitro >= CAR.OVERDRIVE_FULL && this.overdrive <= 0) {
+      this.overdrive = CAR.OVERDRIVE_TIME;
+      this.nitro = 0;
+      eventBus.emit(Events.CAR_OVERDRIVE, { car: this });
+    }
+    this.prevNitroBtn = c.nitro;
+    const od = this.overdrive > 0;
     // Nitro
-    this.nitroActive = can && c.nitro && this.nitro > 0.5;
+    this.nitroActive = !od && can && c.nitro && this.nitro > 0.5;
     if (this.nitroActive) this.nitro = Math.max(0, this.nitro - CAR.NITRO_DRAIN * dt);
-    const boosting = this.boostTime > 0 || this.nitroActive;
+    const boosting = this.boostTime > 0 || this.nitroActive || od;
     this.boosting = boosting;
 
-    let topEff = top * (boosting ? CAR.BOOST_TOP_MULT : 1) * (this.empTime > 0 ? ITEMS.EMP_SLOW + 0.3 : 1) * (this.slipstream ? 1.06 : 1);
+    let topEff = top * (od ? CAR.OVERDRIVE_TOP_MULT : boosting ? CAR.BOOST_TOP_MULT : 1) * (this.empTime > 0 ? ITEMS.EMP_SLOW + 0.3 : 1) * (this.slipstream ? 1.06 : 1);
 
     const h0 = this.heading;
     const fx = Math.sin(h0), fz = Math.cos(h0);
@@ -134,7 +143,7 @@ export class Car {
 
     if (!this.airborne) {
       if (throttle > 0 && vF < topEff) vF += accel * throttle * dt * Math.max(0.18, 1 - (vF / topEff) ** 2);
-      if (boosting && vF < topEff) vF += CAR.BOOST_ACCEL * dt;
+      if (boosting && vF < topEff) vF += CAR.BOOST_ACCEL * (od ? 1.6 : 1) * dt;
       if (this.slipstream && vF < topEff) vF += CAR.SLIPSTREAM_ACCEL * dt;
       if (brake > 0) {
         if (vF > 0.5) vF -= CAR.BRAKE * brake * dt;
