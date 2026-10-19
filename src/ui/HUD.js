@@ -385,8 +385,11 @@ export class HUD {
         if (L.dlv !== h.driftLevel) {
           L.dlv = h.driftLevel;
           pane.drift.style.setProperty('--dc', DRIFT_CSS[h.driftLevel]);
-          pane.dl.textContent = DRIFT_NAME[h.driftLevel] ? `Ур. ${DRIFT_NAME[h.driftLevel]}` : '';
         }
+        // the tail is close to coming all the way round: warn to catch it with counter-steer
+        const warn = (race.humans[p]?.slip || 0) > CAR.DRIFT_SPIN_ANGLE * 0.72;
+        txt('dlt', pane.dl, warn ? 'Контрруль!' : DRIFT_NAME[h.driftLevel] ? `Ур. ${DRIFT_NAME[h.driftLevel]}` : '');
+        if (L.slipW !== warn) { L.slipW = warn; pane.drift.classList.toggle('slip', warn); }
       }
       const lo = Math.max(0, (h.speedFrac - 0.75) * 1.6) + (h.boosting ? 0.45 : 0);
       const loq = Math.round(Math.min(1, lo) * 20) / 20;
