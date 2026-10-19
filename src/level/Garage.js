@@ -23,6 +23,13 @@ function poolTexture() {
   return poolTex;
 }
 
+/** Light-pool tint: bright colours (white, yellow) are toned down so the disc doesn't turn into a glare. */
+function poolColor(hex) {
+  const c = new THREE.Color(hex);
+  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return c.multiplyScalar(0.8 * (1 - 0.5 * lum));
+}
+
 /** Showroom scene: turntables with the players' selected cars. */
 export class Garage {
   constructor(renderer) {
@@ -87,7 +94,7 @@ export class Garage {
       ring.position.y = 0.26;
       // podium lit in the car's colour: a soft light pool on the disc (no lamp: its highlight sparkled on the paint)
       const pool = new THREE.Mesh(new THREE.CircleGeometry(3.3, 64), new THREE.MeshBasicMaterial({
-        map: poolTexture(), color: new THREE.Color(CAR_COLORS[garage[p].color].hex).multiplyScalar(0.8),
+        map: poolTexture(), color: poolColor(CAR_COLORS[garage[p].color].hex),
         transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
       }));
       pool.rotation.x = -Math.PI / 2;
@@ -122,7 +129,7 @@ export class Garage {
     if (m.shadow) m.shadow.visible = false;
     this.platforms[p].plat.add(m.root);
     this.platforms[p].ring.material.color.setHex(color).multiplyScalar(2.5);
-    this.platforms[p].pool.material.color.setHex(color).multiplyScalar(0.8);
+    this.platforms[p].pool.material.color.copy(poolColor(color));
     this.models[p] = m;
     this.pop = 0.25;
   }
