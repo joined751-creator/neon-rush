@@ -14,6 +14,7 @@ import { MobileControls } from '../systems/MobileControls.js';
 import { setupPWA } from '../systems/PWA.js';
 import { Progress } from './Progress.js';
 import { ProgressUI } from '../ui/ProgressUI.js';
+import { OverdriveFX } from '../gameplay/Overdrive.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -28,6 +29,7 @@ export class Game {
     this.hud = new HUD();
     this.progress = new Progress(this.gs);
     this.progressUI = new ProgressUI(this.progress, this.menus, this.gs);
+    this.odfx = new OverdriveFX();
     this.garage = null;
     this.race = null;
     this.state = 'menu'; // menu | garage | race | paused | results
@@ -73,6 +75,7 @@ export class Game {
       garage: this.gs.garage, gameState: this.gs, input: this.input, demo: true,
     });
     this.progress.beginRace(this.race);
+    this.odfx.attach(this.race);
     this.state = 'menu';
     this.hud.hide();
     this.audio.setListeners([]);
@@ -116,6 +119,7 @@ export class Game {
     if (this.gp) this.gp.roster = this.race.roster;
     this.progress.applyToRace(this.race);
     this.progress.beginRace(this.race);
+    this.odfx.attach(this.race);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
@@ -294,7 +298,7 @@ export class Game {
     else if (this.state === 'paused' && this.input.pausePressed()) this.resume();
 
     if (this.state === 'garage') this.garage.update(dt);
-    else if (this.race && this.state !== 'paused' && !this.rotateBlock) this.race.update(dt);
+    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); }
     if (this.state === 'race') this.mobile.update(this.race);
     this.render.setSpeedFX(this.state === 'race' || this.state === 'results' ? this.race.fxStrength : [0, 0]);
 

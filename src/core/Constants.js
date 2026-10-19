@@ -61,6 +61,9 @@ export const CAR = {
   BOOST_ACCEL: 30,
   BOOST_TOP_MULT: 1.3,
   NITRO_DRAIN: 32,
+  OVERDRIVE_FULL: 99.5, // nitro tank level that turns the nitro button into OVERDRIVE
+  OVERDRIVE_TIME: 4.5,
+  OVERDRIVE_TOP_MULT: 1.5,
   NITRO_START: 35,
   NITRO_DRIFT_GAIN: 11,
   NITRO_SLIPSTREAM_GAIN: 14,
