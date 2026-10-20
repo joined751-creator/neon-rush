@@ -142,9 +142,10 @@ export class Track {
     // Exclude the start straight zone for ramps
     const cand = runs.filter((r) => runLen(r) > 70 && r.a * this.step > L * 0.12 && r.b * this.step < L * 0.92)
       .sort((p, q) => runLen(q) - runLen(p));
-    if (cand[0]) {
-      const r = cand[0];
-      this.ramps.push({ s: ((r.a + r.b) / 2) * this.step, len: TRACK.RAMP_LENGTH });
+    // low gravity = longer flights: put the ramp early in the straight so cars land before the next bend
+    const at = (this.def.gravity ?? 1) < 1 ? 0.28 : 0.5;
+    for (const r of cand.slice(0, this.def.ramps ?? 1)) {
+      this.ramps.push({ s: (r.a + (r.b - r.a) * at) * this.step, len: TRACK.RAMP_LENGTH });
     }
     // Boost pads near the start of each decent straight
     for (const r of runs) {
@@ -175,13 +176,21 @@ export class Track {
     group.add(road);
 
     // Barriers: inner face + neon top cap + outer skirt down to the ground, both sides in one mesh
-    const bar = new THREE.Mesh(this.barrierGeometry(wallOff), barrierMaterial(theme, envMap));
+    const bar = new THREE.Mesh(this.barrierGeometry(wallOff, theme.floating), barrierMaterial(theme, envMap));
     bar.matrixAutoUpdate = false;
     group.add(bar);
 
     // Viaduct pillars + cross beams where the road is elevated (shaded by the barrier material)
-    const piers = this.pierGeometry();
+    const piers = theme.floating ? null : this.pierGeometry();
     if (piers) group.add(new THREE.Mesh(piers, bar.material));
+    if (theme.floating) {
+      // hover-track look: glowing neon strips along the bottom edge of the floating deck
+      for (const [side, c] of [[-1, theme.wall], [1, theme.wall2]]) {
+        const strip = new THREE.Mesh(this.ribbonVertical(side * (wallOff + 0.37), -2.0, -1.72), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.2), side: THREE.DoubleSide }));
+        strip.matrixAutoUpdate = false;
+        group.add(strip);
+      }
+    }
 
     // Underside
     const under = this.ribbon((i, side) => [side * (wallOff + 0.4), -0.4], { vScale: 0.05 });
@@ -333,7 +342,7 @@ export class Track {
   }
 
   /** Barrier profile swept along the track: inner face, top cap, outer skirt to the ground. aBar = (s, v, face, side). */
-  barrierGeometry(wallOff) {
+  barrierGeometry(wallOff, floating = false) {
     const n = this.n;
     const H = TRACK.WALL_HEIGHT, T = 0.35, GROUND = -1.0;
     const faces = 3, perSide = faces * (n + 1) * 2;
@@ -354,7 +363,7 @@ export class Track {
           else if (f === 1) { A = [wallOff, y + H, 0]; B = [wallOff + T, y + H, T]; }
           else {
             // outer fascia: reaches the ground near ground level, becomes a 2 m viaduct edge when elevated
-            const bot = Math.max(GROUND, y - 2.0);
+            const bot = floating ? y - 2.0 : Math.max(GROUND, y - 2.0);
             A = [wallOff + T, y + H, 0]; B = [wallOff + T, bot, y + H - bot];
           }
           for (const P of [A, B]) {
