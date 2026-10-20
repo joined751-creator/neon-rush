@@ -4,6 +4,7 @@ export const TRACK_ACCENT = {
   city: { a: '#00e5ff', b: '#ff2bd6', label: 'Ночь' },
   arctic: { a: '#7df9ff', b: '#b388ff', label: 'Лёд' },
   volcano: { a: '#ff7a1a', b: '#ffd400', label: 'Лава' },
+  space: { a: '#39ff88', b: '#8a5cff', label: 'Космос' },
 };
 
 export function accentFor(theme) { return TRACK_ACCENT[theme] || TRACK_ACCENT.city; }
