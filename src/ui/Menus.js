@@ -5,6 +5,7 @@ import { Track } from '../level/Track.js';
 import { MODE_ICONS, UI_ICONS } from './Icons.js';
 import { runSplash } from './Splash.js';
 import { drawTrackThumb, accentFor } from './TrackThumbs.js';
+import { installV4UI } from './V4UI.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -33,6 +34,7 @@ export class Menus {
     const tracks = TRACKS.map((def) => new Track(def));
     this.trackOutlines = tracks.map((t) => t.outline(160));
     this.trackLengths = tracks.map((t) => t.length);
+    installV4UI();
     runSplash();
 
     document.addEventListener('click', (e) => {
@@ -70,6 +72,12 @@ export class Menus {
     const s = this.gs.settings;
     switch (a) {
       case 'play': this.show('setup'); break;
+      case 'tryNew': {
+        const i = TRACKS.findIndex((t) => t.isNew);
+        if (i >= 0) { s.track = i; s.mirror = false; if (s.mode === 'gp') s.mode = 'race'; this.gs.saveSettings(); }
+        this.show('setup');
+        break;
+      }
       case 'quick2':
         s.players = 2; s.mode = 'race'; s.bots = Math.max(s.bots, 3);
         this.gs.saveSettings();
@@ -138,7 +146,7 @@ export class Menus {
       c.style.setProperty('--acc2', acc.b);
       const rec = this.gs.records[`${i}${s.mirror ? 'm' : ''}`];
       const km = (this.trackLengths[i] / 1000).toFixed(1).replace('.', ',');
-      c.innerHTML = `<span class="tc-top"><span class="tc-n">${String(i + 1).padStart(2, '0')}</span><span class="tc-theme">${acc.label}</span><span class="tc-len">${km} км</span></span>
+      c.innerHTML = `<span class="tc-top"><span class="tc-n">${String(i + 1).padStart(2, '0')}</span><span class="tc-theme">${acc.label}</span>${t.isNew ? '<span class="tc-new">Новая</span>' : ''}<span class="tc-len">${km} км</span></span>
         <canvas width="240" height="96"></canvas><span class="card-t">${t.name}</span><span class="card-d">${t.desc}</span>
         <span class="rec${rec?.bestLap ? '' : ' none'}">${rec?.bestLap ? UI_ICONS.star + 'Рекорд ' + fmt(rec.bestLap) : 'Рекорда нет'}</span>`;
       c.onclick = () => { if (s.mode === 'gp') return; s.track = i; eventBus.emit(Events.UI_CLICK); this.renderSetup(); };
@@ -155,7 +163,7 @@ export class Menus {
     $('#opt-mirror').classList.toggle('disabled', s.mode === 'gp');
     const m = MODES.find((x) => x.id === s.mode);
     const total = s.mode === 'trial' ? s.players : s.players + s.bots;
-    $('#setup-summary').textContent = `${m.name} · ${s.mode === 'gp' ? 'все 4 трассы' : TRACKS[s.track].name} · ${total} ${total === 1 ? 'машина' : total < 5 ? 'машины' : 'машин'}`;
+    $('#setup-summary').textContent = `${m.name} · ${s.mode === 'gp' ? 'все 5 трасс' : TRACKS[s.track].name} · ${total} ${total === 1 ? 'машина' : total < 5 ? 'машины' : 'машин'}`;
   }
 
   seg(sel, opts, value, set) {
