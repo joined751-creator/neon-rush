@@ -260,7 +260,7 @@ export class Car {
     // Height / ramps
     const groundY = q.y + this.track.rampHeight(q.s);
     if (this.airborne) {
-      this.vy -= CAR.GRAVITY * dt;
+      this.vy -= CAR.GRAVITY * (this.track.def.gravity ?? 1) * dt;
       this.y += this.vy * dt;
       if (this.y <= groundY) {
         this.y = groundY;
