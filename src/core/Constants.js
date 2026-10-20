@@ -164,11 +164,11 @@ export const ITEMS = {
 export const MODES = [
   { id: 'race', name: 'Гонка', desc: 'Классика: круги, соперники, бонусы. Первый на финише забирает всё.' },
   { id: 'elim', name: 'Выбывание', desc: 'Каждые 25 секунд последний вылетает. Выживает один.' },
-  { id: 'gp', name: 'Гран-при', desc: 'Чемпионат из 4 трасс подряд. Очки за места, кубок — лучшему по сумме.' },
+  { id: 'gp', name: 'Гран-при', desc: 'Чемпионат из 5 трасс подряд. Очки за места, кубок — лучшему по сумме.' },
   { id: 'trial', name: 'На время', desc: 'Без соперников. Бей свой призрак лучшего круга.' },
 ];
 
-export const GP = { POINTS: [10, 8, 6, 5, 4, 3, 2, 1], TRACKS: [0, 1, 2, 3] };
+export const GP = { POINTS: [10, 8, 6, 5, 4, 3, 2, 1], TRACKS: [0, 1, 2, 3, 4] };
 
 export const ELIMINATION = { INTERVAL: 25, FIRST_DELAY: 30 };
 
@@ -251,6 +251,22 @@ export const THEMES = {
       NEON_RUSH_SIGN,
     ],
     strips: ['ЛАВА', 'КРАТЕР', 'ЖАРА'],
+  },
+  space: {
+    skyTop: 0x020108, skyMid: 0x0a0624, skyHorizon: 0x2a0f5a, fog: 0x08051a,
+    fogNear: 120, fogFar: 1400, ground: 0x03020a, grid: 0x8a5cff, sun: false, planet: true, nebula: true,
+    roadLine: 0x39ff88, wall: 0x8a5cff, wall2: 0x39ff88, hemiSky: 0x6a58c0, hemiGround: 0x0a0618, dirColor: 0xb8b0ff,
+    props: 'space', particles: 'stardust', stars: true, exposure: 1.08, floating: true,
+    asphalt: 0x0a0916, lamp: 0x9a80ff, kerbA: 0x8a5cff, kerbB: 0xe8f4ff, barrierMetal: 0x262240, cityGlow: 0xff2bd6,
+    signs: [
+      { title: 'ОРБИТА', sub: 'ПОСЛЕДНЯЯ ЗАПРАВКА · 380 000 КМ', c1: '#39ff88', c2: '#8a5cff', icon: 'bolt' },
+      { title: 'НЕВЕСОМОСТЬ', sub: 'ПРЫГАЙ ДАЛЬШЕ ВСЕХ', c1: '#8a5cff', c2: '#00e5ff', icon: 'wave' },
+      { title: 'TURBO FM', sub: '104.8 · КОСМИЧЕСКИЙ ЭФИР', c1: '#ff2bd6', c2: '#39ff88', icon: 'wave' },
+      { title: 'СТАНЦИЯ 7', sub: 'ДОК ДЛЯ ГОНЩИКОВ', c1: '#00e5ff', c2: '#ffffff', icon: 'sun' },
+      { title: 'VOLT', sub: 'ЗАРЯЖЕН ЗВЁЗДАМИ', c1: '#ffe14d', c2: '#8a5cff', icon: 'bolt' },
+      NEON_RUSH_SIGN,
+    ],
+    strips: ['ДОК 7', 'ОРБИТА', 'КОСМОС'],
   },
 };
 
