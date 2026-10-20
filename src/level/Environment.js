@@ -6,6 +6,7 @@ import { buildSky } from './Sky.js';
 import { buildGround, buildMountains, buildSkyline } from './Terrain.js';
 import { Dressing } from './Dressing.js';
 import { buildScenery } from './Scenery.js';
+import { buildSpace } from './SpaceScenery.js';
 import { buildWeather } from './Weather.js';
 
 /**
@@ -51,11 +52,12 @@ export class Environment {
     this.skyMat = this.sky.material;
     this.timeUniforms.push(this.skyMat.uniforms.uTime);
     this.group.add(this.sky);
-    this.group.add(buildGround(theme, b, this.timeUniforms, qp));
+    // open space: no ground and no horizon — the starfield continues below the track
+    if (!theme.floating) this.group.add(buildGround(theme, b, this.timeUniforms, qp));
 
     let volcanoTop = null;
     if (theme.props === 'city') this.group.add(buildSkyline(theme, b, qp, this.timeUniforms));
-    else {
+    else if (!theme.floating) {
       const mt = buildMountains(theme, b, qp, sunDir, this.timeUniforms);
       this.group.add(mt.mesh);
       volcanoTop = mt.volcanoTop;
@@ -92,7 +94,7 @@ export class Environment {
     this.dressing = new Dressing(ctx);
     for (const o of this.dressing.objects) this.group.add(o);
     lap('dressing');
-    buildScenery(ctx);
+    if (theme.props === 'space') buildSpace(ctx); else buildScenery(ctx);
     lap('scenery');
 
     const metal = batch.mesh('metal', new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.38, envMapIntensity: 1.1 }));
@@ -166,6 +168,12 @@ function buildEnvMap(renderer, theme) {
   } else if (theme.sun) {
     panel(theme.sunColor1, 4, 10, 6, 0, 3, 14);
     panel(theme.sunColor2, 2.5, 26, 3, 0, 0.5, 14);
+  } else if (theme.planet) {
+    panel(0xd060ff, 2.2, 14, 14, 8, 8, 12);
+    for (let i = 0; i < 40; i++) {
+      const a = r() * Math.PI * 2, e = r() * 1.2 - 0.3, d = 20;
+      panel(0xe8f0ff, 3, 0.25, 0.25, Math.cos(a) * Math.cos(e) * d, Math.sin(e) * d, Math.sin(a) * Math.cos(e) * d);
+    }
   } else if (theme.aurora) {
     panel(0x30ffa0, 1.6, 40, 6, 0, 12, -6);
     panel(0x9a60ff, 1.2, 40, 4, 0, 15, 6);

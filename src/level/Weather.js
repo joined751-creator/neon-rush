@@ -111,8 +111,8 @@ export function buildWeather(kind, qp, timeUniforms) {
     lines.onBeforeRender = (r, s, camera) => { cam.value.copy(camera.position); };
     return lines;
   }
-  const snow = kind === 'snow';
-  const count = Math.round((snow ? 3200 : 1100) * k);
+  const snow = kind === 'snow', dust = kind === 'stardust';
+  const count = Math.round((snow ? 3200 : dust ? 1500 : 1100) * k);
   const box = snow ? 80 : 90, boxY = snow ? 40 : 45;
   const pos = new Float32Array(count * 3), seed = new Float32Array(count);
   for (let i = 0; i < count; i++) {
@@ -126,10 +126,10 @@ export function buildWeather(kind, qp, timeUniforms) {
     vertexShader: PT_VERT, fragmentShader: PT_FRAG, transparent: true, depthWrite: false,
     blending: snow ? THREE.NormalBlending : THREE.AdditiveBlending,
     uniforms: {
-      uTime: { value: 0 }, uSpeed: { value: snow ? 5.5 : -5 }, uBox: { value: box }, uBoxY: { value: boxY },
+      uTime: { value: 0 }, uSpeed: { value: snow ? 5.5 : dust ? -0.8 : -5 }, uBox: { value: box }, uBoxY: { value: boxY },
       uSize: { value: snow ? 0.13 : 0.12 }, uSway: { value: snow ? 1.4 : 2.2 }, uViewH: { value: 720 }, uMaxPx: { value: snow ? 7 : 5 },
-      uCam: { value: new THREE.Vector3() }, uColor: { value: new THREE.Color(snow ? 0xeaf6ff : 0xff6a10) },
-      uColor2: { value: new THREE.Color(0xffc040) }, uMode: { value: snow ? 0 : 1 },
+      uCam: { value: new THREE.Vector3() }, uColor: { value: new THREE.Color(snow ? 0xeaf6ff : dust ? 0x6ff8ff : 0xff6a10) },
+      uColor2: { value: new THREE.Color(dust ? 0xc080ff : 0xffc040) }, uMode: { value: snow ? 0 : 1 },
     },
   });
   timeUniforms.push(mat.uniforms.uTime);

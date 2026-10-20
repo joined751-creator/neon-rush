@@ -69,7 +69,7 @@ export class Dressing {
     const { track, theme, batch, glow } = this.ctx;
     const f = frameAt(track, 0, 0);
     const X = this.wallOff + 2.6, C = 9.4, BH = 3.2;
-    const gy = -0.6 - f.y;
+    const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
     for (const sx of [-1, 1]) { const c = wp(f.m, sx * X, 0, 0); this.ctx.exclude.push({ x: c.x, z: c.z, r: 6 }); }
     const metal = 0x3a3646, dark = 0x1a1822;
     const A = theme.wall, B = theme.wall2;
@@ -140,7 +140,7 @@ export class Dressing {
     this.gantryS.forEach((s, gi) => {
       const f = frameAt(track, s, 0);
       const X = this.wallOff + 1.8, C = 9.2, BH = 1.4, Dp = 1.1;
-      const gy = -0.6 - f.y;
+      const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
       for (const sx of [-1, 1]) { const c = wp(f.m, sx * X, 0, 0); this.ctx.exclude.push({ x: c.x, z: c.z, r: 5 }); }
       const metal = 0x4a4658;
       const top = C + BH;
@@ -203,7 +203,7 @@ export class Dressing {
         if (this.gantryS.some((g) => Math.abs(g - s) < 8)) continue;
         const f = frameAt(track, s, side * lat0, side > 0 ? Math.PI : 0);
         if (!this.clear(f.x, f.z, this.wallOff + 0.9)) continue;
-        const gy = -0.6 - f.y;
+        const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
         const colH = 9.1 - gy;
         const col = new THREE.CylinderGeometry(0.11, 0.17, colH, 6);
         col.translate(0, gy + colH / 2, 0);
@@ -235,7 +235,7 @@ export class Dressing {
       const side = c > 0 ? -1 : 1; // outside of the bend
       const f = frameAt(track, s, side * (this.wallOff + 1.0), Math.PI - side * 0.35);
       if (!this.clear(f.x, f.z, this.wallOff + 0.6)) continue;
-      const gy = -0.6 - f.y;
+      const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
       const color = side < 0 ? theme.wall : theme.wall2;
       const q = quadGeo(2.4, 0.8);
       q.translate(0, 1.95, 0.04);
@@ -267,7 +267,7 @@ export class Dressing {
       if (!ok) continue;
       this.stands = (this.stands || 0) + 1;
       { const c = wp(f.m, D0 + 4, 0, 0); this.ctx.exclude.push({ x: c.x, z: c.z, r: LEN / 2 + 8 }); }
-      const gy = -0.6 - f.y;
+      const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
       const back = D0 + T * TD;
       // tiers
       for (let k = 0; k < T; k++) {
@@ -379,7 +379,7 @@ export class Dressing {
         }
       }
       if (!f) continue;
-      const gy = -0.6 - f.y;
+      const gy = this.ctx.theme.floating ? -2.0 : -0.6 - f.y;
       this.ctx.exclude.push({ x: f.x, z: f.z, r: 13 });
       const cell = ATLAS_CELLS.board[(k + 1) % 5];
       const q = quadGeo(W, H);
