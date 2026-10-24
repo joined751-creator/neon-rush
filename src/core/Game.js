@@ -16,6 +16,7 @@ import { Progress } from './Progress.js';
 import { ProgressUI } from '../ui/ProgressUI.js';
 import { OverdriveFX } from '../gameplay/Overdrive.js';
 import { setupLegend } from '../gameplay/Legend.js';
+import { ChaseUI } from '../ui/ChaseUI.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -31,6 +32,7 @@ export class Game {
     this.progress = new Progress(this.gs);
     this.progressUI = new ProgressUI(this.progress, this.menus, this.gs);
     this.odfx = new OverdriveFX();
+    this.chaseUI = new ChaseUI(this);
     this.garage = null;
     this.race = null;
     this.state = 'menu'; // menu | garage | race | paused | results
@@ -123,7 +125,7 @@ export class Game {
     // the Legend stays for a whole Grand Prix once it has started in it (keeps the standings consistent)
     if (newGP && this.gp) this.gp.legend = this.progress.legendActive();
     const legendOn = this.gp ? this.gp.legend : this.progress.legendActive();
-    if (this.race.mode !== 'trial' && legendOn && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
+    if (this.race.mode !== 'trial' && this.race.mode !== 'chase' && legendOn && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
     this.odfx.attach(this.race);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();

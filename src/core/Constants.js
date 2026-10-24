@@ -163,6 +163,7 @@ export const ITEMS = {
 
 export const MODES = [
   { id: 'race', name: 'Гонка', desc: 'Классика: круги, соперники, бонусы. Первый на финише забирает всё.' },
+  { id: 'chase', name: 'Погоня', desc: 'Уходи от неоновой полиции! Продержись 90 секунд и не дай себя зажать.' },
   { id: 'elim', name: 'Выбывание', desc: 'Каждые 25 секунд последний вылетает. Выживает один.' },
   { id: 'gp', name: 'Гран-при', desc: 'Чемпионат из 5 трасс подряд. Очки за места, кубок — лучшему по сумме.' },
   { id: 'trial', name: 'На время', desc: 'Без соперников. Бей свой призрак лучшего круга.' },
@@ -171,6 +172,14 @@ export const MODES = [
 export const GP = { POINTS: [10, 8, 6, 5, 4, 3, 2, 1], TRACKS: [0, 1, 2, 3, 4] };
 
 export const ELIMINATION = { INTERVAL: 25, FIRST_DELAY: 30 };
+
+// v4.3 «Погоня»: survive the police for TIME seconds. Capture meter fills while a patrol is within BUST_DIST
+// and the player is slower than BUST_SPEED (m/s); rams add heat. Wanted level ★ rises every LEVEL_EVERY s.
+export const CHASE = {
+  TIME: 90, HEAD_START: 1.5, LEVEL_EVERY: 30, COPS_MIN: 2, COPS_MAX: 5, START_GAP: 42,
+  COP_SPEED: [1.02, 1.07, 1.12], CATCHUP: 0.45, CATCHUP_FROM: 25, CATCHUP_RANGE: 110, PURSUIT_DIST: 32,
+  BUST_DIST: 7.5, BUST_SPEED: 13, BUST_TIME: 2.2, COOL: 0.3, RAM_HEAT: 0.012, ESCAPE_GAP: 160,
+};
 
 export const CAMERA = {
   DIST: 8.2,

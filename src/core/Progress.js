@@ -260,6 +260,11 @@ export class Progress {
     const diff = DIFF_MULT[st.difficulty] ?? 1;
     if (res.mode === 'trial') {
       lines.push(['Заезд на время', 80]);
+    } else if (res.mode === 'chase' && me) {
+      // v4.3 chase: escaping pays like a win, getting caught pays for the time survived; takedowns on top
+      const t = Math.min(me.time ?? 0, res.chaseTime ?? 90);
+      lines.push([me.escaped ? 'Ушёл от погони' : `Продержался ${Math.floor(t)} с`, Math.round((me.escaped ? 400 * diff : t * 2.5) / 5) * 5]);
+      if (me.takedowns > 0) lines.push([`Патрули сбиты ×${me.takedowns}`, me.takedowns * 60]);
     } else if (me) {
       const bots = res.rows.filter((r) => !r.human).length;
       const base = PLACE_REWARD[Math.min(PLACE_REWARD.length, me.place) - 1] * (0.4 + 0.6 * Math.min(1, bots / 5)) * diff;
@@ -292,7 +297,7 @@ export class Progress {
     this.data.credits += earned;
     this.data.stats.earned += earned;
     this.data.stats.races++;
-    if (me?.place === 1 && res.mode !== 'trial') this.data.stats.wins++;
+    if (me?.place === 1 && res.mode !== 'trial' && !me.eliminated) this.data.stats.wins++;
     // finish-based missions
     if (res.mode !== 'trial' && finished) {
       this.bump('races');
