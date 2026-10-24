@@ -9,6 +9,7 @@ import { SkidMarks } from '../systems/SkidMarks.js';
 import { CameraRig } from '../systems/CameraRig.js';
 import { Car } from './Car.js';
 import { CarLights } from './CarLights.js';
+import { CarFX } from './CarFX.js';
 import { LightTrails } from './LightTrails.js';
 import { AIDriver } from './AIDriver.js';
 import { ItemSystem } from './Items.js';
@@ -182,6 +183,8 @@ export class Race {
     if (this.demo) this.cars.forEach((c) => { c.controlEnabled = true; c.lap = 1; c.lapMax = 1; });
     this.trails = new LightTrails(this.scene, this.cars);
     this.carLights = new CarLights(this.cars, this.theme);
+    this.render.preRender = () => this.carFX?.capture(this.fxFocus);
+    this.carFX = new CarFX({ scene: this.scene, renderer: this.render.renderer, cars: this.cars, theme: this.theme, fx: this.fx, items: this.items, quality: this.render.quality });
   }
 
   setupViews() {
@@ -268,6 +271,8 @@ export class Race {
     if (this.demo) this.updateDemoCamera(dt);
     const fc = this.demo ? this.cars[this.demoTarget] : (this.humans[0]?.eliminated ? this.spectateTarget() : this.humans[0]);
     if (fc) this.env.focus(fc.x, fc.y, fc.z);
+    this.fxFocus = fc;
+    this.carFX?.update(dt, fc);
     const vh = this.render.viewportHeightPx();
     this.fx.sparks.setViewportHeight(vh);
     this.fx.smoke.setViewportHeight(vh);
@@ -293,7 +298,7 @@ export class Race {
     const y = p.y + 16 + Math.random() * 14;
     this.fx.sparks.burst(70, { x: p.x, y, z: p.z, color: col, size: 1.5, sizeEnd: 0.1, life: 1.4, gravity: 5, drag: 1.4 }, 34);
     this.fx.sparks.burst(20, { x: p.x, y, z: p.z, color: 0xffffff, size: 0.9, sizeEnd: 0.05, life: 0.6, gravity: 2, drag: 2 }, 20);
-    eventBus.emit(Events.FIREWORK, { x: p.x, z: p.z });
+    eventBus.emit(Events.FIREWORK, { x: p.x, y, z: p.z, color: col });
   }
 
   readHuman(car) {
@@ -699,6 +704,8 @@ export class Race {
     this.items.dispose();
     this.trails?.dispose();
     this.carLights?.dispose();
+    this.carFX?.dispose();
+    if (this.render.preRender) this.render.preRender = null;
     this.fx.sparks.dispose();
     this.fx.smoke.dispose();
     this.fx.skids.dispose();

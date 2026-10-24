@@ -15,12 +15,31 @@ const SpeedShader = {
     uRect: { value: [new THREE.Vector4(0, 0, 1, 1), new THREE.Vector4(0, 0, 0, 0)] },
     uStr: { value: [0, 0] },
     uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 },
-    uGrain: { value: 0.025 }, uTime: { value: 0 }, uCA: { value: 0.0022 },
+    uGrain: { value: 0.025 }, uTime: { value: 0 }, uCA: { value: 0.0022 }, uRain: { value: 0 }, uAspect: { value: 1.78 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform vec4 uRect[2]; uniform float uStr[2]; varying vec2 vUv;
-    uniform vec3 uLift, uGain; uniform float uSat, uGrain, uTime, uCA;
+    uniform vec3 uLift, uGain; uniform float uSat, uGrain, uTime, uCA, uRain, uAspect;
+    // v4.2 raindrops on the lens (Neon City): round drops that appear, sit, some slide down; each bends the picture
+    vec3 dropLayer(vec2 uv, float t, float sc, float seed) {
+      vec2 p = uv * vec2(uAspect, 1.0) * sc;
+      vec2 id = floor(p); vec2 f = fract(p) - 0.5;
+      float h = fract(sin(dot(id + seed, vec2(12.9898, 78.233))) * 43758.5453);
+      float h2 = fract(h * 91.7 + seed), h3 = fract(h * 37.3);
+      float life = fract(t * (0.12 + 0.1 * h3) + h);
+      vec2 pos = (vec2(h, h2) - 0.5) * 0.55;
+      float slide = step(0.68, h3);
+      pos.y += 0.25 - slide * life * life * 0.9;
+      vec2 dd = f - pos; dd.y *= 1.0 + slide * 0.6;
+      float rad = 0.09 + 0.1 * h2;
+      float m = smoothstep(rad, rad * 0.55, length(dd)) * smoothstep(1.0, 0.8, life) * smoothstep(0.0, 0.06, life) * step(0.25, h2);
+      return vec3(dd / rad * m, m);
+    }
+    vec3 rain(vec2 uv) {
+      vec3 a = dropLayer(uv, uTime, 7.0, 0.0), b = dropLayer(uv, uTime * 1.3, 13.0, 3.1);
+      return a + b * 0.7;
+    }
     // v4.1 per-track colour grade (HDR, before tone mapping): tinted shadows (lift), tinted highlights (gain),
     // saturation, a subtle film grain and a touch of lens chromatic aberration towards the frame edges
     vec3 grade(vec3 c, vec2 uv) {
@@ -32,7 +51,9 @@ const SpeedShader = {
       return max(c, vec3(0.0));
     }
     void main(){
-      vec2 uv = vUv; float s = 0.0; vec2 c = vec2(0.5); vec4 r = vec4(0.0, 0.0, 1.0, 1.0);
+      vec2 uv = vUv; float drop = 0.0;
+      if (uRain > 0.0) { vec3 rd = rain(vUv); uv -= rd.xy * 0.018 * uRain; drop = rd.z * uRain; }
+      float s = 0.0; vec2 c = vec2(0.5); vec4 r = vec4(0.0, 0.0, 1.0, 1.0);
       for (int i = 0; i < 2; i++) {
         vec4 q = uRect[i];
         if (uv.x >= q.x && uv.x <= q.x + q.z && uv.y >= q.y && uv.y <= q.y + q.w) { s = uStr[i]; r = q; c = q.xy + q.zw * vec2(0.5, 0.52); }
@@ -45,7 +66,7 @@ const SpeedShader = {
         vec2 ca = d * uCA * l * l;
         vec3 b = vec3(texture2D(tDiffuse, uv + ca).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - ca).b);
         b = mix(b, b * b * (3.0 - 2.0 * min(b, 1.0)), 0.12);
-        gl_FragColor = vec4(grade(b, uv) * vig, 1.0); return;
+        gl_FragColor = vec4(grade(b, uv) * vig * (1.0 + 0.12 * drop), 1.0); return;
       }
       float amt = s * smoothstep(0.15, 0.75, l) * 0.045;
       vec3 col = vec3(0.0);
@@ -59,7 +80,7 @@ const SpeedShader = {
       }
       col /= 8.0;
       col = mix(col, col * col * (3.0 - 2.0 * min(col, 1.0)), 0.12);
-      gl_FragColor = vec4(grade(col, uv) * vig, 1.0);
+      gl_FragColor = vec4(grade(col, uv) * vig * (1.0 + 0.12 * drop), 1.0);
     }`,
 };
 
@@ -164,6 +185,7 @@ export class RenderSystem {
   /** v4.1: per-track cinematic look (theme.fx) and the world direction of the sun / moon / planet. */
   setLook(theme, lightDir) {
     this.look = theme?.fx || null;
+    this.rain = theme?.wet ? 1 : 0; // v4.2: drops on the lens on the rainy track
     this.lightDir = lightDir ? lightDir.clone().normalize() : null;
     this.applyLook(this.scene === this.mainScene ? this.look : null);
   }
@@ -174,6 +196,7 @@ export class RenderSystem {
     u.uLift.value.fromArray(g.lift || [0, 0, 0]);
     u.uGain.value.fromArray(g.gain || [1, 1, 1]);
     u.uSat.value = g.sat ?? 1;
+    u.uRain.value = fx ? this.rain ?? 0 : 0;
     this.cine.setLook(fx || { streak: 0.15, god: 0, flare: 0 });
     this.lightsOn = !!(fx && this.lightDir);
   }
@@ -263,6 +286,7 @@ export class RenderSystem {
 
   render() {
     this.renderer.shadowMap.needsUpdate = true;
+    if (this.scene === this.mainScene) this.preRender?.(); // v4.2: live car reflections are filmed only for drawn frames
     if (this.quality === 'low') {
       const r = this.renderer;
       const W = window.innerWidth, H = window.innerHeight;
@@ -279,6 +303,7 @@ export class RenderSystem {
       r.setViewport(0, 0, W, H);
     } else {
       this.speedPass.uniforms.uTime.value = (performance.now() / 1000) % 1000;
+      this.speedPass.uniforms.uAspect.value = window.innerWidth / Math.max(1, window.innerHeight);
       this.updateLights();
       this.composer.render();
     }
