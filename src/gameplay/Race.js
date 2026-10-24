@@ -8,6 +8,7 @@ import { ParticleSystem } from '../systems/ParticleSystem.js';
 import { SkidMarks } from '../systems/SkidMarks.js';
 import { CameraRig } from '../systems/CameraRig.js';
 import { Car } from './Car.js';
+import { CarLights } from './CarLights.js';
 import { LightTrails } from './LightTrails.js';
 import { AIDriver } from './AIDriver.js';
 import { ItemSystem } from './Items.js';
@@ -53,7 +54,10 @@ export class Race {
     this.track = new Track(def, this.settings.mirror);
     this.env = new Environment(scene, render.renderer, this.theme, this.track);
     render.renderer.toneMappingExposure = this.theme.exposure;
+    render.setLook(this.theme, this.env.fxLightDir);
     this.trackGroup = this.track.build(this.theme, this.env.envMap);
+    // v4.1: road, barriers, ramps and piers receive the cars' real-time shadows
+    this.trackGroup.traverse((o) => { if (o.isMesh && o.material?.isMeshStandardMaterial) o.receiveShadow = true; });
     scene.add(this.trackGroup);
 
     this.fx = {
@@ -177,6 +181,7 @@ export class Race {
     }
     if (this.demo) this.cars.forEach((c) => { c.controlEnabled = true; c.lap = 1; c.lapMax = 1; });
     this.trails = new LightTrails(this.scene, this.cars);
+    this.carLights = new CarLights(this.cars, this.theme);
   }
 
   setupViews() {
@@ -254,12 +259,15 @@ export class Race {
     // Visuals
     for (const car of this.cars) car.updateVisual(dt, this.time);
     this.trails?.update(dt);
+    this.carLights?.update(dt);
     this.humans.forEach((hc, i) => {
       const rig = this.rigs[i];
       const target = hc.eliminated ? this.spectateTarget() : hc;
       if (target) rig.update(target, dt);
     });
     if (this.demo) this.updateDemoCamera(dt);
+    const fc = this.demo ? this.cars[this.demoTarget] : (this.humans[0]?.eliminated ? this.spectateTarget() : this.humans[0]);
+    if (fc) this.env.focus(fc.x, fc.y, fc.z);
     const vh = this.render.viewportHeightPx();
     this.fx.sparks.setViewportHeight(vh);
     this.fx.smoke.setViewportHeight(vh);
@@ -690,6 +698,7 @@ export class Race {
     if (this.ghostModel) { this.scene.remove(this.ghostModel.root); disposeCarModel(this.ghostModel); }
     this.items.dispose();
     this.trails?.dispose();
+    this.carLights?.dispose();
     this.fx.sparks.dispose();
     this.fx.smoke.dispose();
     this.fx.skids.dispose();
