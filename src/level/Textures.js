@@ -146,7 +146,10 @@ export function windowsTexture() {
 
 export function labelTexture(text, color) {
   const [c, g] = canvas(256, 128);
-  g.font = '900 72px "Unbounded", "Arial Black", sans-serif';
+  // long names (ЛЕГЕНДА, ПРИЗРАК) used to be cut at the edges: shrink the font until the word fits
+  let size = 72;
+  g.font = `900 ${size}px "Unbounded", "Arial Black", sans-serif`;
+  while (size > 30 && g.measureText(text).width > 232) { size -= 4; g.font = `900 ${size}px "Unbounded", "Arial Black", sans-serif`; }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.lineWidth = 10;
