@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAR, TRACK, THEMES, DIFFICULTY, AI_NAMES, CAR_TYPES, CAR_COLORS, ELIMINATION, PARTICLES } from '../core/Constants.js';
+import { CAR, TRACK, THEMES, DIFFICULTY, AI_NAMES, CAR_TYPES, CAR_COLORS, ELIMINATION, PARTICLES, CHASE } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { TRACKS } from '../level/TrackDefs.js';
 import { Track } from '../level/Track.js';
@@ -10,6 +10,7 @@ import { CameraRig } from '../systems/CameraRig.js';
 import { Car } from './Car.js';
 import { CarLights } from './CarLights.js';
 import { CarFX } from './CarFX.js';
+import { ChaseMode } from './Chase.js';
 import { LightTrails } from './LightTrails.js';
 import { AIDriver } from './AIDriver.js';
 import { ItemSystem } from './Items.js';
@@ -69,7 +70,7 @@ export class Race {
     const itemsOn = this.settings.items && this.mode !== 'trial';
     this.items = new ItemSystem(scene, this.track, this.fx, itemsOn);
 
-    this.laps = this.mode === 'elim' ? 999 : demo ? 999 : this.settings.laps;
+    this.laps = this.mode === 'elim' || this.mode === 'chase' ? 999 : demo ? 999 : this.settings.laps;
     this.humans = [];
     this.cars = [];
     this.drivers = new Map();
@@ -137,7 +138,7 @@ export class Race {
   buildCars() {
     const s = this.settings;
     const humanCount = this.demo ? 0 : s.players;
-    const bots = this.demo ? 6 : this.mode === 'trial' ? 0 : s.bots;
+    const bots = this.demo ? 6 : this.mode === 'trial' ? 0 : this.mode === 'chase' ? Math.min(CHASE.COPS_MAX, Math.max(CHASE.COPS_MIN, s.bots)) : s.bots;
     const total = humanCount + bots;
     const skill = DIFFICULTY[this.demo ? 1 : s.difficulty];
     const usedColors = new Set(this.demo ? [] : this.garage.slice(0, humanCount).map((g) => g.color));
@@ -181,6 +182,7 @@ export class Race {
       this.cars.push(car);
     }
     if (this.demo) this.cars.forEach((c) => { c.controlEnabled = true; c.lap = 1; c.lapMax = 1; });
+    if (this.mode === 'chase') this.chase = new ChaseMode(this); // v4.3: police livery + AI (before lights/FX see the models)
     this.trails = new LightTrails(this.scene, this.cars);
     this.carLights = new CarLights(this.cars, this.theme);
     this.render.preRender = () => this.carFX?.capture(this.fxFocus);
@@ -258,6 +260,7 @@ export class Race {
     this.updatePlaces();
     if (!this.demo) this.checkRules(dt);
     this.updateGhost(dt);
+    this.chase?.update(dt);
 
     // Visuals
     for (const car of this.cars) car.updateVisual(dt, this.time);
@@ -473,6 +476,7 @@ export class Race {
 
   checkRules(dt) {
     if (this.phase !== 'racing' && this.phase !== 'finished') return;
+    if (this.chase) { this.chase.rules(dt); return; }
     // Laps & finish
     for (const car of this.cars) {
       if (car.eliminated || car.finished) continue;
@@ -540,6 +544,7 @@ export class Race {
   }
 
   finishRace() {
+    if (this.chase) { this.results = this.chase.results(); eventBus.emit(Events.RACE_FINISHED, this.results); return; }
     // Estimate times for unfinished cars
     const L = this.track.length;
     const rows = this.order.map((c) => {
@@ -705,6 +710,7 @@ export class Race {
     this.trails?.dispose();
     this.carLights?.dispose();
     this.carFX?.dispose();
+    this.chase?.dispose();
     if (this.render.preRender) this.render.preRender = null;
     this.fx.sparks.dispose();
     this.fx.smoke.dispose();
