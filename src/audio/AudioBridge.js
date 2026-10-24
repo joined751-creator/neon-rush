@@ -30,6 +30,7 @@ class EngineVoice {
   }
 
   update(car) {
+    if (car.type.ev) { this.updateEV(car); return; }
     const ctx = A.ctx, t = ctx.currentTime;
     const sr = Math.max(0, Math.min(1.25, Math.abs(car.speed) / car.topSpeed));
     const gears = 5;
@@ -48,6 +49,27 @@ class EngineVoice {
     this.nb.frequency.setTargetAtTime(1500 + (car.driftLevel || 0) * 250, t, 0.1);
     this.bg.gain.setTargetAtTime(car.boosting ? 0.25 : 0, t, 0.1);
     this.bf.frequency.setTargetAtTime(car.boosting ? 1800 : 400, t, 0.2);
+  }
+
+  /** v4.4 electric car: a clean rising whine (no gears, no rumble) + the same tyre and boost layers. */
+  updateEV(car) {
+    const ctx = A.ctx, t = ctx.currentTime;
+    if (!this.ev) {
+      this.ev = true;
+      this.o1.type = 'sine'; this.o2.type = 'triangle'; this.o3.type = 'sine';
+    }
+    const sr = Math.max(0, Math.min(1.25, Math.abs(car.speed) / car.topSpeed));
+    const f = 110 + sr * 1050 + (car.controls.throttle > 0 ? 40 : 0);
+    this.o1.frequency.setTargetAtTime(f, t, 0.05);
+    this.o2.frequency.setTargetAtTime(f * 0.5, t, 0.05);
+    this.o3.frequency.setTargetAtTime(f * 2.01, t, 0.05);
+    this.f.frequency.setTargetAtTime(1800 + sr * 3200, t, 0.08);
+    const vol = car.eliminated ? 0 : 0.16 + car.controls.throttle * 0.2 + (car.boosting ? 0.15 : 0);
+    this.g.gain.setTargetAtTime(vol, t, 0.08);
+    const slide = !car.airborne && (car.drifting || Math.abs(car.lateralSpeed) > 6 || car.spinTime > 0) ? 0.22 : 0;
+    this.ng.gain.setTargetAtTime(slide, t, 0.05);
+    this.bg.gain.setTargetAtTime(car.boosting ? 0.3 : 0, t, 0.1);
+    this.bf.frequency.setTargetAtTime(car.boosting ? 2600 : 600, t, 0.2);
   }
 
   dispose() {
@@ -111,7 +133,7 @@ export class AudioBridge {
     on(Events.CAR_NEARMISS, ({ car }) => car.human && sfx.whoosh(panFor(car)));
     on(Events.FIREWORK, () => sfx.firework());
     on(Events.THUNDER, () => this.listeners.length && sfx.thunder());
-    on(Events.CAR_BACKFIRE, ({ car }) => near(car, 30) && sfx.backfire(panFor(car)));
+    on(Events.CAR_BACKFIRE, ({ car }) => !car.type.ev && near(car, 30) && sfx.backfire(panFor(car)));
     on(Events.MUSIC_MENU, () => this.music.play('menu'));
     on(Events.MUSIC_RACE, () => this.music.play('race'));
     on(Events.MUSIC_STOP, () => this.music.stop());
