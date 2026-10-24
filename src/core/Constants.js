@@ -192,7 +192,8 @@ export const THEMES = {
     skyTop: 0x0a0322, skyMid: 0x3b0a5c, skyHorizon: 0xff3d7f, fog: 0x3a0d4a,
     fogNear: 90, fogFar: 1100, ground: 0x12041e, grid: 0xff2bd6, sun: true, sunColor1: 0xffe14d, sunColor2: 0xff2b8a,
     roadLine: 0x00f0ff, wall: 0xff2bd6, wall2: 0x00f0ff, hemiSky: 0x9a6bff, hemiGround: 0x2a0630, dirColor: 0xffb0d0,
-    props: 'palms', particles: null, stars: true, exposure: 1.05,
+    props: 'palms', particles: null, stars: true, exposure: 1.05, carLights: 0.45,
+    fx: { streak: 0.22, streakCol: 0xb58cff, god: 0.85, godCol: 0xffb070, godThr: 0.95, flare: 0.75, flareCol: 0xffc890, grade: { lift: [0.035, 0.0, 0.05], gain: [1.04, 0.98, 1.0], sat: 1.08 } },
     asphalt: 0x1c1626, lamp: 0xff8fd8, kerbA: 0xff2bd6, kerbB: 0xeee6ff, barrierMetal: 0x2e2640, mountains: 'grid',
     signs: [
       { title: 'VOLT', sub: 'ЭНЕРГИЯ НОЧНОЙ ТРАССЫ', c1: '#00e5ff', c2: '#ffe14d', icon: 'bolt' },
@@ -208,7 +209,8 @@ export const THEMES = {
     skyTop: 0x02030c, skyMid: 0x0d0a2a, skyHorizon: 0x3a1a6a, fog: 0x120a28,
     fogNear: 60, fogFar: 750, ground: 0x07060f, grid: 0x00e5ff, sun: false,
     roadLine: 0x00e5ff, wall: 0xff00aa, wall2: 0x00e5ff, hemiSky: 0x5a7bff, hemiGround: 0x150a20, dirColor: 0x9fb8ff,
-    props: 'city', particles: 'rain', stars: false, exposure: 1.1,
+    props: 'city', particles: 'rain', stars: false, exposure: 1.1, carLights: 1.0,
+    fx: { streak: 0.32, streakCol: 0x4f8dff, god: 0.3, godCol: 0xa8c4ff, godThr: 0.85, flare: 0.35, flareCol: 0xb8ccff, grade: { lift: [0.0, 0.025, 0.045], gain: [1.06, 0.97, 1.03], sat: 1.1 } },
     asphalt: 0x15141c, lamp: 0x9fd4ff, kerbA: 0xff1a4a, kerbB: 0xe6e6f0, wet: 1, barrierMetal: 0x262634, moon: true, clouds: true, cityGlow: 0xff3d9a,
     signs: [
       { title: 'НЕОН', sub: 'ШИНЫ ДЛЯ МОКРОЙ НОЧИ', c1: '#00e5ff', c2: '#ff2bd6', icon: 'drop' },
@@ -224,7 +226,8 @@ export const THEMES = {
     skyTop: 0x010612, skyMid: 0x062038, skyHorizon: 0x1c6f8a, fog: 0x0b2a40,
     fogNear: 80, fogFar: 950, ground: 0x0a1c2c, grid: 0x7df9ff, sun: false, aurora: true,
     roadLine: 0x7df9ff, wall: 0xb388ff, wall2: 0x7df9ff, hemiSky: 0x9fe8ff, hemiGround: 0x103040, dirColor: 0xd8f4ff,
-    props: 'ice', particles: 'snow', stars: true, exposure: 1.05,
+    props: 'ice', particles: 'snow', stars: true, exposure: 1.05, carLights: 0.8,
+    fx: { streak: 0.26, streakCol: 0x7fd8ff, god: 0.45, godCol: 0xbfe8ff, godThr: 0.85, flare: 0.4, flareCol: 0xcfeaff, grade: { lift: [0.0, 0.015, 0.04], gain: [0.97, 1.0, 1.05], sat: 1.02 } },
     asphalt: 0x1a2030, lamp: 0xbfeaff, kerbA: 0x2a7dff, kerbB: 0xf0f8ff, frost: 1, barrierMetal: 0x2a3444, moon: true, mountains: 'snow',
     signs: [
       { title: 'ПОЛЮС', sub: 'ГОРЯЧИЙ ЧАЙ · 5 КМ', c1: '#7df9ff', c2: '#ffffff', icon: 'flake' },
@@ -240,7 +243,8 @@ export const THEMES = {
     skyTop: 0x0a0202, skyMid: 0x2a0604, skyHorizon: 0xb8300a, fog: 0x2a0a04,
     fogNear: 70, fogFar: 900, ground: 0x140504, grid: 0xff5a00, sun: true, sunColor1: 0xffd000, sunColor2: 0xff2a00,
     roadLine: 0xffb000, wall: 0xff4400, wall2: 0xffd000, hemiSky: 0xff9a60, hemiGround: 0x300804, dirColor: 0xffc090,
-    props: 'rocks', particles: 'embers', stars: false, exposure: 1.0,
+    props: 'rocks', particles: 'embers', stars: false, exposure: 1.0, carLights: 0.55,
+    fx: { streak: 0.22, streakCol: 0xff8a40, god: 0.95, godCol: 0xff8a40, godThr: 0.9, flare: 0.55, flareCol: 0xffa060, grade: { lift: [0.04, 0.008, 0.0], gain: [1.06, 0.98, 0.92], sat: 1.1 } },
     asphalt: 0x1c1412, lamp: 0xffa040, kerbA: 0xff4a00, kerbB: 0x201410, barrierMetal: 0x30221e, smoke: true, mountains: 'lava',
     signs: [
       { title: 'МАГМА 1000°', sub: 'САМАЯ ГОРЯЧАЯ ТРАССА', c1: '#ff5a00', c2: '#ffd000', icon: 'flame' },
@@ -256,7 +260,8 @@ export const THEMES = {
     skyTop: 0x020108, skyMid: 0x0a0624, skyHorizon: 0x2a0f5a, fog: 0x08051a,
     fogNear: 120, fogFar: 1400, ground: 0x03020a, grid: 0x8a5cff, sun: false, planet: true, nebula: true,
     roadLine: 0x39ff88, wall: 0x8a5cff, wall2: 0x39ff88, hemiSky: 0x6a58c0, hemiGround: 0x0a0618, dirColor: 0xb8b0ff,
-    props: 'space', particles: 'stardust', stars: true, exposure: 1.08, floating: true,
+    props: 'space', particles: 'stardust', stars: true, exposure: 1.08, floating: true, carLights: 0.9,
+    fx: { streak: 0.28, streakCol: 0x9a7cff, god: 0.7, godCol: 0xc8a0ff, godThr: 0.45, flare: 0.5, flareCol: 0xd8b8ff, grade: { lift: [0.02, 0.0, 0.045], gain: [1.0, 1.02, 1.05], sat: 1.1 } },
     asphalt: 0x0a0916, lamp: 0x9a80ff, kerbA: 0x8a5cff, kerbB: 0xe8f4ff, barrierMetal: 0x262240, cityGlow: 0xff2bd6,
     signs: [
       { title: 'ОРБИТА', sub: 'ПОСЛЕДНЯЯ ЗАПРАВКА · 380 000 КМ', c1: '#39ff88', c2: '#8a5cff', icon: 'bolt' },
