@@ -107,6 +107,9 @@ export const CAR_TYPES = [
   { id: 'viper', name: 'Гадюка X', desc: 'Среднемоторный гиперкар: максималка выше всех', speed: 1.0, accel: 0.6, handling: 0.55, weight: 0.95 },
   { id: 'titan', name: 'Титан V8', desc: 'Маслкар V8: разгон и таран', speed: 0.7, accel: 1.0, handling: 0.5, weight: 1.45 },
   { id: 'spark', name: 'Искра', desc: 'Хот-хэтч: лучшая управляемость', speed: 0.6, accel: 0.85, handling: 1.0, weight: 0.8 },
+  // v4.4
+  { id: 'pulse', name: 'Импульс EV', desc: 'Электро-суперкар: мгновенный разгон, тишина и плазменный буст', speed: 0.88, accel: 0.95, handling: 0.72, weight: 1.15, ev: true },
+  { id: 'buran', name: 'Буран 4×4', desc: 'Раллийный внедорожник: самый тяжёлый — таранит всех', speed: 0.6, accel: 0.78, handling: 0.66, weight: 1.5 },
 ];
 
 export const CAR_COLORS = [
