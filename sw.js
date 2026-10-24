@@ -1,7 +1,7 @@
 // NEON RUSH service worker: offline play after the first visit.
 // Game files: network first (updates show up on the next launch), cache as offline fallback.
 // Three.js from the CDN and fonts: cache first.
-const CACHE = 'neon-rush-v20';
+const CACHE = 'neon-rush-v21';
 const CORE = ['./', 'index.html', 'src/ui/style.css', 'src/main.js', 'manifest.webmanifest', 'icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
