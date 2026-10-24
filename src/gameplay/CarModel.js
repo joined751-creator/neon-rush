@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { radialTexture, labelTexture } from '../level/Textures.js';
+import { EXTRA_SPECS, buildKitExtras } from './CarKits.js';
 
 /*
  * Procedural sports cars built by lofting cross-sections along the car's length.
@@ -48,6 +49,7 @@ const SPECS = {
     flare: 0.065, frontPeak: 0.02, rearHaunch: 0.05,
     kit: { spoiler: 'roof', exhaust: 1, caliper: 0x00d0ff, rimStyle: 7, hatch: true },
   },
+  ...EXTRA_SPECS, // v4.4: «Импульс EV», «Буран 4×4»
 };
 
 // ----------------------------------------------------------------------------------- helpers
@@ -443,7 +445,7 @@ function materials(colorHex, ghost, kit) {
   const neon = new THREE.MeshBasicMaterial({ color: accent.clone().multiplyScalar(2.4) });
   const head = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xe6f6ff).multiplyScalar(3.2) });
   const tail = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff1030).multiplyScalar(1.6) });
-  const roof = kit.spoiler === 'wing' ? carbonM : paint;
+  const roof = kit.spoiler === 'wing' ? carbonM : kit.glassRoof ? glass : paint;
   return { paint, glass, dark, carbon: carbonM, chrome, tyre, rim, caliper, neon, head, tail, disc, roof, accent };
 }
 
@@ -496,12 +498,14 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
   const exPos = kit.exhaust === 4 ? [-0.32, -0.2, 0.2, 0.32] : kit.exhaust === 2 ? [-0.55, 0.55] : [0.5];
   const exhausts = [];
   for (const x of exPos) {
+    const pos = new THREE.Vector3(x, B.bot(tail + 0.1) + 0.08, tail + 0.04);
+    exhausts.push(pos); // an EV has no pipes, but its plasma boost still comes out of the diffuser here
+    if (kit.ev) continue;
     const e = add(exGeo, M.chrome);
-    e.position.set(x, B.bot(tail + 0.1) + 0.08, tail + 0.04);
+    e.position.copy(pos);
     const inner = add(new THREE.CircleGeometry(0.045, 12), M.dark);
     inner.position.set(x, B.bot(tail + 0.1) + 0.08, tail - 0.05);
     inner.rotation.y = Math.PI;
-    exhausts.push(e.position.clone());
   }
   // Mirrors
   for (const side of [-1, 1]) {
@@ -577,6 +581,7 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
       v.position.set(0, B.top(z) + 0.04, z);
     }
   }
+  buildKitExtras({ kit, S, B, M, add, ghost, nose, tail });
   // Rear licence plate (blank)
   const plate = add(new THREE.PlaneGeometry(0.46, 0.11), new THREE.MeshStandardMaterial({ color: 0xe8e8ee, roughness: 0.5 }));
   plate.position.set(0, B.bot(tail + 0.05) + 0.24, tail - 0.005);
@@ -689,7 +694,7 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
   }
 
   return {
-    root, body, wheels, glow, shadow, flames, flameMat, shield, shieldMat, tailMat: M.tail, tag,
+    root, body, wheels, glow, shadow, flames, flameMat, shield, shieldMat, tailMat: M.tail, tag, ev: !!kit.ev,
     dims: { L: S.L, W: S.W, r: S.r, rear: tail, front: nose },
   };
 }

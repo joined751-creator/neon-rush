@@ -9,7 +9,7 @@ import { TRACKS } from '../level/TrackDefs.js';
 
 export const CURRENCY = '₵';
 export const START_CREDITS = 600;
-export const CAR_PRICE = { comet: 0, spark: 0, titan: 900, viper: 1500 };
+export const CAR_PRICE = { comet: 0, spark: 0, titan: 900, viper: 1500, buran: 1100, pulse: 1800 };
 export const COLOR_PRICE = 200; // colours 0..3 are free
 export const FREE_COLORS = 4;
 export const GOLD_INDEX = CAR_COLORS.findIndex((c) => c.name === 'Золото');

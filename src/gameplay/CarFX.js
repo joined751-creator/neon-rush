@@ -160,6 +160,11 @@ export class CarFX {
     for (const fl of this.flames) {
       fl.mat.uniforms.uTime.value += dt;
       const fls = fl.car.model.flames;
+      if (fl.car.model.ev) {
+        // v4.4 electric car: no backfire pops, and the boost is a blue / violet plasma instead of fire
+        for (const f of fls) if (!fl.car.boosting) f.visible = false;
+        fl.mat.uniforms.uColor.value.setHex(fl.car.nitroActive ? 0xb36bff : 0x46c8ff).multiplyScalar(3);
+      }
       const on = fls.length && fls[0].visible && !fl.car.eliminated;
       fl.sMat.color.copy(fl.mat.uniforms.uColor.value).multiplyScalar(0.5);
       const k = 0.75 + Math.random() * 0.5;

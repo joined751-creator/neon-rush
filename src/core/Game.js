@@ -17,6 +17,7 @@ import { ProgressUI } from '../ui/ProgressUI.js';
 import { OverdriveFX } from '../gameplay/Overdrive.js';
 import { setupLegend } from '../gameplay/Legend.js';
 import { ChaseUI } from '../ui/ChaseUI.js';
+import { CarsUI } from '../ui/CarsUI.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -33,6 +34,7 @@ export class Game {
     this.progressUI = new ProgressUI(this.progress, this.menus, this.gs);
     this.odfx = new OverdriveFX();
     this.chaseUI = new ChaseUI(this);
+    this.carsUI = new CarsUI(this);
     this.garage = null;
     this.race = null;
     this.state = 'menu'; // menu | garage | race | paused | results
