@@ -81,6 +81,29 @@ export class Environment {
     const dir = new THREE.DirectionalLight(theme.dirColor, 1.6);
     dir.position.set(-120, 200, -260);
     this.group.add(dir);
+    // v4.1: the key light casts real-time shadows from the cars. Its shadow box (±SH m) follows the camera's car,
+    // so a 1–2k map stays sharp; its azimuth is set relative to the sun / moon / planet.
+    const moonDir = this.sky.material.uniforms.uMoonDir.value;
+    const keyFrom = theme.sun ? sunDir : theme.planet ? this.sky.material.uniforms.uPlanetDir.value : moonDir;
+    // shadows fall sideways: a key light from the side (not straight from the low sun ahead) keeps glossy
+    // clear-coat and glass free of blinding highlights while the shadows stay long and visible
+    const kAz = Math.atan2(keyFrom.x, keyFrom.z) + 1.75, kEl = 0.4;
+    this.lightDir = new THREE.Vector3(Math.sin(kAz) * Math.cos(kEl), Math.sin(kEl), Math.cos(kAz) * Math.cos(kEl));
+    this.fxLightDir = keyFrom.clone().normalize(); // where the bright source sits in the sky (lens flare / light rays)
+    dir.castShadow = true;
+    const SH = 34;
+    const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+    const ms = qp.q === 'high' && !touch ? 2048 : 1024;
+    dir.shadow.mapSize.set(ms, ms);
+    Object.assign(dir.shadow.camera, { left: -SH, right: SH, top: SH, bottom: -SH, near: 10, far: 320 });
+    dir.shadow.camera.updateProjectionMatrix();
+    dir.shadow.bias = -0.0004;
+    dir.shadow.normalBias = 0.04;
+    dir.shadow.radius = 3;
+    dir.shadow.intensity = theme.shadow ?? 0.75;
+    this.group.add(dir.target);
+    this.keyLight = dir;
+    this.keyTexel = (SH * 2) / ms;
 
     // Trackside dressing + theme props
     this.atlas = signAtlasTexture(theme.signs, theme.strips, qp.atlas);
@@ -108,6 +131,15 @@ export class Environment {
     lap('merge+weather');
 
     scene.add(this.group);
+  }
+
+  /** Moves the shadow box with the focused car (snapped to shadow-map texels so edges don't shimmer). */
+  focus(x, y, z) {
+    const L = this.keyLight, d = this.lightDir, t = this.keyTexel;
+    const sx = Math.round(x / t) * t, sz = Math.round(z / t) * t;
+    L.target.position.set(sx, y, sz);
+    L.position.set(sx + d.x * 160, y + d.y * 160, sz + d.z * 160);
+    L.target.updateMatrixWorld();
   }
 
   update(dt) {

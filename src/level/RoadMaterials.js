@@ -145,6 +145,19 @@ const ROAD_MAIN = /* glsl */`
   }
 `;
 
+// v4.1: the cars' real-time shadow also darkens the ambient / reflected light on the road and barriers
+// (most of the road light is ambient + neon reflections, so a direct-light-only shadow would be invisible)
+const SHADOW_AMB = /* glsl */`#include <lights_fragment_end>
+#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+  {
+    DirectionalLightShadow ksh = directionalLightShadows[ 0 ];
+    float sh = getShadow( directionalShadowMap[ 0 ], ksh.shadowMapSize, ksh.shadowIntensity, ksh.shadowBias, ksh.shadowRadius, vDirectionalShadowCoord[ 0 ] );
+    float k = mix( 1.0, sh, 0.82 );
+    reflectedLight.indirectDiffuse *= k;
+    reflectedLight.indirectSpecular *= k;
+  }
+#endif`;
+
 export function roadMaterial(track, theme, envMap, qp) {
   const detail = asphaltDetailTexture(qp.q === 'low' ? 256 : 512);
   const wet = theme.wet ?? 0;
@@ -177,7 +190,8 @@ export function roadMaterial(track, theme, envMap, qp) {
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = rdRough;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = rdMetal;')
       .replace('#include <normal_fragment_maps>', bump ? 'normal = rdPerturb(-vViewPosition, normal, vec2(dFdx(rdH), dFdy(rdH)), faceDirection);' : '')
-      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = rdEm;');
+      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = rdEm;')
+      .replace('#include <lights_fragment_end>', SHADOW_AMB);
   };
   mat.customProgramCacheKey = () => 'nr-road-' + (bump ? 1 : 0);
   return mat;
@@ -241,7 +255,8 @@ export function barrierMaterial(theme, envMap) {
       .replace('#include <common>', '#include <common>\n' + BAR_PARS)
       .replace('#include <map_fragment>', BAR_MAIN)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = brRough;')
-      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = brEm;');
+      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = brEm;')
+      .replace('#include <lights_fragment_end>', SHADOW_AMB);
   };
   mat.customProgramCacheKey = () => 'nr-barrier';
   return mat;
