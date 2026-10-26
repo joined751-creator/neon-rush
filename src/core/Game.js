@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { warmupShaders } from '../gameplay/Warmup.js';
 import { GAME, GP } from './Constants.js';
 import { eventBus, Events } from './EventBus.js';
 import { gameState } from './GameState.js';
@@ -129,6 +130,7 @@ export class Game {
     const legendOn = this.gp ? this.gp.legend : this.progress.legendActive();
     if (this.race.mode !== 'trial' && this.race.mode !== 'chase' && legendOn && setupLegend(this.race) && this.progress.session) this.progress.session.legend = true;
     this.odfx.attach(this.race);
+    warmupShaders(this.race, this.render.renderer);
     this.hud.setup(this.race, this.gs.settings);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
