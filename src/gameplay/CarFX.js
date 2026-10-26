@@ -10,7 +10,7 @@ import { eventBus, Events } from '../core/EventBus.js';
  *  - landing dust ring after jumps, fireball + shockwave on rocket hits, fireworks with crackle and gold "willow".
  */
 
-let glowTex = null;
+export let glowTex = null;
 
 function radial() {
   const S = 64;
@@ -71,8 +71,11 @@ export class CarFX {
     const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
     // ---- live reflections
-    const res = quality === 'low' ? 64 : quality === 'high' && !touch ? 256 : 128;
+    // v4.4.1: phones get a small cube refreshed every other frame (the reflections still move, at a fraction of the cost)
+    const res = quality === 'low' || touch ? 64 : quality === 'high' ? 256 : 128;
     this.facesPerFrame = quality === 'high' && !touch ? 2 : 1;
+    this.captureEvery = touch || quality === 'low' ? 2 : 1;
+    this.frame = 0;
     this.cubeRT = new THREE.WebGLCubeRenderTarget(res, { type: THREE.HalfFloatType });
     this.cubeCam = new THREE.CubeCamera(0.5, 1200, this.cubeRT);
     this.face = 0;
@@ -122,6 +125,19 @@ export class CarFX {
       items.explode = (x, y, z, color) => { orig(x, y, z, color); this.blast(x, y, z, color); };
     }
 
+    // v4.4.1 level of detail: cars far from every player's camera drop the small wheel parts (rim spokes, brake disc,
+    // caliper, hub light) and the headlight cones — a car 40 m away looks the same, at a third of the draw calls
+    this.lod = cars.map((car) => {
+      const detail = [];
+      for (const w of car.model.wheels) {
+        detail.push(...w.spin.children.slice(1));
+        for (const o of w.pivot.children) if (o !== w.spin) detail.push(o);
+      }
+      for (const o of car.model.body.children) {
+        if (o.isMesh && o.geometry?.type === 'ConeGeometry' && o.material.blending === THREE.AdditiveBlending && o.visible) detail.push(o);
+      }
+      return { car, detail, near: true };
+    });
     this.smokeTint = new THREE.Color(0x8a84a0).lerp(new THREE.Color(theme.wall), 0.22).getHex();
     this.wet = (theme.wet ?? 0) > 0;
   }
@@ -139,7 +155,7 @@ export class CarFX {
     if (!this.primed) {
       cam.update(r, this.scene); // first frame: the whole cube at once
       this.primed = true;
-    } else {
+    } else if (++this.frame % this.captureEvery === 0) {
       const prev = r.getRenderTarget(), pf = r.getActiveCubeFace(), pm = r.getActiveMipmapLevel();
       for (let k = 0; k < this.facesPerFrame; k++) {
         r.setRenderTarget(this.cubeRT, this.face);
@@ -169,6 +185,14 @@ export class CarFX {
       fl.sMat.color.copy(fl.mat.uniforms.uColor.value).multiplyScalar(0.5);
       const k = 0.75 + Math.random() * 0.5;
       for (const g of fl.glows) { g.visible = on; g.scale.setScalar(k * (fl.car.boosting ? 1.1 : 0.7)); }
+    }
+    const viewers = this.cars.filter((c) => c.human);
+    if (!viewers.length && focus) viewers.push(focus);
+    for (const L of this.lod) {
+      let d2 = Infinity;
+      for (const v of viewers) d2 = Math.min(d2, (v.x - L.car.x) ** 2 + (v.z - L.car.z) ** 2);
+      const near = d2 < (L.near ? 42 * 42 : 36 * 36); // a little hysteresis so nothing flickers at the edge
+      if (near !== L.near) { L.near = near; for (const o of L.detail) o.visible = near; }
     }
     const F = this.fx;
     for (const car of this.cars) {

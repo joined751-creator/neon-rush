@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { optimizeCarModel } from './CarMerge.js';
 
 /**
  * v4.1 car lighting on the road: a soft pool of headlight light in front of every car and a red glow from the
@@ -68,10 +69,12 @@ export class CarLights {
     this.headGeo = new THREE.PlaneGeometry(W, L).rotateX(-Math.PI / 2);
     this.tailGeo = new THREE.PlaneGeometry(2.8, 2.2).rotateX(-Math.PI / 2);
     this.items = cars.map((car) => {
-      // opaque body parts cast real-time shadows (the soft blob under the car stays as contact shadow)
-      car.model.body.traverse((o) => {
+      optimizeCarModel(car.model); // v4.4.1: ~70 parts welded into ~15 draw calls per car (phones)
+      // opaque body parts cast real-time shadows (the soft blob under the car stays as contact shadow);
+      // v4.4.1: only the (welded) body shell parts, not every wheel piece — far fewer draw calls in the shadow pass
+      for (const o of car.model.body.children) {
         if (o.isMesh && !o.material.transparent && o.material.blending !== THREE.AdditiveBlending) o.castShadow = true;
-      });
+      }
       const d = car.model.dims;
       const head = new THREE.Mesh(this.headGeo, this.headMat);
       head.position.set(0, 0.07, d.front - 0.4 + L / 2);
