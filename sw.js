@@ -1,11 +1,11 @@
 // NEON RUSH service worker: offline play after the first visit.
 // Game files: network first (updates show up on the next launch), cache as offline fallback.
 // Three.js from the CDN and fonts: cache first.
-const CACHE = 'neon-rush-v27';
+const CACHE = 'neon-rush-v28';
 const CORE = ['./', 'index.html', 'src/ui/style.css', 'src/main.js', 'manifest.webmanifest', 'icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -24,7 +24,9 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const hit = await cache.match(req, { ignoreSearch: own });
-      const net = fetch(req, own ? { cache: 'no-cache' } : undefined).then((res) => {
+      // v4.5.1: a page load (mode "navigate") can't be re-fetched with extra options — that threw, so the page itself
+      // was always served from the old cache and could mismatch the fresh game code. Fetch it by URL instead.
+      const net = (own ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req)).then((res) => {
         if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
         return res;
       });
