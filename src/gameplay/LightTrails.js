@@ -34,11 +34,14 @@ export function tidyModel(m) {
  * Neon taillight streaks: two thin additive ribbons per car that trail behind at speed
  * (the classic long-exposure look of night racing). One draw call per car.
  */
+const STREAKS = false;
+
 export class LightTrails {
   constructor(scene, cars) {
     this.scene = scene;
     cars.forEach((car) => tidyModel(car.model));
-    this.items = cars.filter((car) => !car.human).map((car) => {
+    // v5.4: no light stripes behind the cars any more — the «Неоновое эхо» (NeonEcho) is the game's own speed effect
+    this.items = cars.filter((car) => STREAKS && !car.human).map((car) => {
       const geo = new THREE.BufferGeometry();
       const pos = new Float32Array(2 * N * 2 * 3); // 2 trails × N points × 2 verts
       const fade = new Float32Array(2 * N * 2);
