@@ -96,7 +96,7 @@ export class Music {
     this.mode = mode;
     const now = A.ctx.currentTime;
     this.bus.gain.cancelScheduledValues(now);
-    this.bus.gain.setTargetAtTime(mode === 'menu' ? 0.85 : 0.55, now, 0.3); // ~ the loudness of the old score, under the engines
+    this.bus.gain.setTargetAtTime(mode === 'menu' ? 1.3 : 1.0, now, 0.3); // v4.5.1: louder — the score sits clearly above the engines
     if (changed) { this.step = 0; this.nextTime = now + 0.12; }
     if (!this.timer) {
       if (!changed) this.nextTime = now + 0.12;
