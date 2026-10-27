@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { eventBus, Events } from '../core/EventBus.js';
 import { LightRibbons } from './LightRibbons.js';
+import { VoxelFX } from './VoxelFX.js';
 
 /**
  * v4.2 cars & effects:
@@ -143,6 +144,8 @@ export class CarFX {
     this.wet = (theme.wet ?? 0) > 0;
     // v5.0 digital world: light ribbons behind every car
     this.ribbons = theme.ribbons ? new LightRibbons(scene, cars) : null;
+    // v5.2: light-cube effects (rez-in at the start, derez on wrecks, re-spawn columns)
+    this.voxels = theme.digital ? new VoxelFX(scene, cars) : null;
   }
 
   // ---------------------------------------------------------------- reflections
@@ -177,6 +180,7 @@ export class CarFX {
   update(dt, focus) {
     this.time += dt;
     this.ribbons?.update(dt);
+    this.voxels?.update(dt);
     for (const fl of this.flames) {
       fl.mat.uniforms.uTime.value += dt;
       const fls = fl.car.model.flames;
@@ -321,5 +325,6 @@ export class CarFX {
     for (const fl of this.flames) { fl.mat.dispose(); fl.sMat.dispose(); }
     this.cubeRT.dispose();
     this.ribbons?.dispose();
+    this.voxels?.dispose();
   }
 }

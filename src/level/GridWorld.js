@@ -34,6 +34,41 @@ THEMES.grid = {
   strips: ['СЕКТОР 7', 'ЯДРО', 'СЕТЬ'],
 };
 
+// v5.2: every world becomes digital — black ground with a light grid, wire-frame mountains and data towers,
+// glossy light-edged road and light ribbons — while each track keeps its own sky and its own two colours
+const DIGITAL = {
+  digital: 1, ribbons: true, props: 'grid', mountains: 'grid', stars: false, carLights: 0.85,
+  hemiGround: 0x010406, barrierMetal: 0x0a1118,
+};
+const WORLDS = {
+  sunset: { c1: 0xff2bd6, c2: 0xffb000, sky: [0x05010d, 0x1a0630, 0xff3d7f], fog: 0x0a0212, ground: 0x050108, hemi: 0x4a1c5a, dir: 0x6a3a6a, asphalt: 0x07050c,
+    fx: { streak: 0.2, streakCol: 0xff6ad8, god: 0.6, godCol: 0xffb070, godThr: 0.95, flare: 0.5, flareCol: 0xffc890, grade: { lift: [0.03, 0.0, 0.04], gain: [1.04, 0.98, 1.02], sat: 1.12 } } },
+  city: { c1: 0x00e5ff, c2: 0xff2bd6, sky: [0x010208, 0x060a1e, 0x1a2a6a], fog: 0x040612, ground: 0x010307, hemi: 0x1d3a70, dir: 0x3a5078, asphalt: 0x05070c, dense: true,
+    fx: { streak: 0.28, streakCol: 0x4fb8ff, god: 0.0, godCol: 0xa8c4ff, godThr: 0.85, flare: 0.0, flareCol: 0xb8ccff, grade: { lift: [0.0, 0.02, 0.045], gain: [1.0, 1.0, 1.06], sat: 1.12 } } },
+  arctic: { c1: 0x8fe8ff, c2: 0x8a6bff, sky: [0x010510, 0x041a2c, 0x0f5068], fog: 0x020c16, ground: 0x01050a, hemi: 0x2a5a70, dir: 0x6a8a9a, asphalt: 0x060a10,
+    fx: { streak: 0.24, streakCol: 0x9fe8ff, god: 0.2, godCol: 0xbfe8ff, godThr: 0.85, flare: 0.0, flareCol: 0xcfeaff, grade: { lift: [0.0, 0.015, 0.04], gain: [0.98, 1.0, 1.06], sat: 1.06 } } },
+  volcano: { c1: 0xff3a1a, c2: 0xffb000, sky: [0x060101, 0x1a0402, 0x8a2008], fog: 0x0c0302, ground: 0x060101, hemi: 0x5a2010, dir: 0x6a3020, asphalt: 0x0a0505,
+    fx: { streak: 0.2, streakCol: 0xff6a30, god: 0.6, godCol: 0xff8a40, godThr: 0.9, flare: 0.3, flareCol: 0xffa060, grade: { lift: [0.035, 0.005, 0.0], gain: [1.06, 0.98, 0.94], sat: 1.12 } } },
+  space: { c1: 0x9a6bff, c2: 0x39ff88, asphalt: 0x05040c, hemi: 0x3a2a70, dir: 0x5a4a90 },
+};
+for (const [key, w] of Object.entries(WORLDS)) {
+  const t = THEMES[key];
+  if (!t) continue;
+  Object.assign(t, DIGITAL, {
+    wall: w.c1, wall2: w.c2, grid: w.c1, roadLine: w.c1, kerbA: w.c2, kerbB: 0x04070b, lamp: w.c1,
+    asphalt: w.asphalt, hemiSky: w.hemi, dirColor: w.dir, denseCity: !!w.dense,
+  });
+  if (w.sky) Object.assign(t, { skyTop: w.sky[0], skyMid: w.sky[1], skyHorizon: w.sky[2], fog: w.fog, ground: w.ground, cityGlow: w.c1 });
+  if (w.fx) t.fx = w.fx;
+  if (key === 'arctic') { t.stars = true; t.frost = 0; } // frost would wash the glass road white
+  if (key === 'space') t.stars = true;
+}
+TRACK_ACCENT.sunset = { a: '#ff2bd6', b: '#ffb000', label: 'Закат' };
+TRACK_ACCENT.city = { a: '#00e5ff', b: '#ff2bd6', label: 'Город' };
+TRACK_ACCENT.arctic = { a: '#8fe8ff', b: '#8a6bff', label: 'Лёд' };
+TRACK_ACCENT.volcano = { a: '#ff3a1a', b: '#ffb000', label: 'Магма' };
+TRACK_ACCENT.space = { a: '#9a6bff', b: '#39ff88', label: 'Космос' };
+
 for (const t of TRACKS) t.isNew = false;
 if (!TRACKS.some((t) => t.id === 'grid')) {
   TRACKS.push({
@@ -107,7 +142,7 @@ function digitalGround(ctx) {
   const mat = new THREE.ShaderMaterial({
     vertexShader: G_VERT, fragmentShader: G_FRAG,
     uniforms: {
-      uBase: { value: new THREE.Color(theme.ground) }, uC1: { value: new THREE.Color(C1) }, uC2: { value: new THREE.Color(C2) },
+      uBase: { value: new THREE.Color(theme.ground) }, uC1: { value: new THREE.Color(theme.wall) }, uC2: { value: new THREE.Color(theme.wall2) },
       uFog: { value: new THREE.Color(theme.fog) }, uFogNear: { value: theme.fogNear * 1.2 }, uFogFar: { value: theme.fogFar }, uTime: { value: 0 },
     },
   });
@@ -156,17 +191,24 @@ function addWireBox(batch, m, w, h, d, color, k, t = 0.18) {
 
 export function buildGrid(ctx) {
   const { qp, rnd, glow, batch, track, b, group, timeUniforms, theme } = ctx;
+  const C1 = theme.wall, C2 = theme.wall2;
+  const floating = !!theme.floating;
   digitalGround(ctx);
-  // distant data-city ring: dark blocks with cyan / orange windows
-  group.add(buildSkyline(theme, b, qp, timeUniforms, {
-    radii: [520], heights: [150], bins: [240], sil: 0x020a12, win: [0x40e8ff, 0xff8a30],
-  }));
+  // distant data-city ring: dark blocks with windows in the world's two colours (a dense, closer ring in the city)
+  if (!floating) {
+    const dense = theme.denseCity;
+    group.add(buildSkyline(theme, b, qp, timeUniforms, {
+      radii: dense ? [230, 520] : [520], heights: dense ? [190, 260] : [150], bins: dense ? [260, 420] : [240],
+      sil: 0x020a12, win: [new THREE.Color(C1).getHex(), new THREE.Color(C2).getHex()],
+    }));
+  }
 
-  // data towers: dark monoliths with glowing edges and floor bands
-  scatter(ctx, Math.round(70 * qp.density) + 10, 45, 430, rnd, (x, z, d) => {
+  // data towers: dark monoliths with glowing edges and floor bands (in open space they float as data blocks)
+  scatter(ctx, Math.round((theme.denseCity ? 110 : 70) * qp.density) + 10, 45, 430, rnd, (x, z, d) => {
     const w = 6 + rnd() * 12, dd = 6 + rnd() * 12;
-    const h = (d < 120 ? 18 : 30) + rnd() * (d < 120 ? 50 : 120);
-    const m = mat4(x, -0.6, z, Math.round(rnd() * 4) * (Math.PI / 2) + (rnd() < 0.3 ? 0.4 : 0));
+    const h = (d < 120 ? 18 : 30) + rnd() * (d < 120 ? 50 : 120) * (theme.denseCity ? 1.6 : 1);
+    const y0 = floating ? (rnd() < 0.5 ? -60 - rnd() * 80 : 40 + rnd() * 60) : -0.6;
+    const m = mat4(x, y0, z, Math.round(rnd() * 4) * (Math.PI / 2) + (rnd() < 0.3 ? 0.4 : 0));
     const col = rnd() < 0.22 ? C2 : C1;
     batch.add('metal', boxGeo(w, h, dd, 0, h / 2, 0), m, 0x06090e);
     addWireBox(batch, m, w, h, dd, col, 1.8, 0.22);
@@ -176,16 +218,16 @@ export function buildGrid(ctx) {
   });
 
   // floating wire cubes, slightly turned, around and above the circuit
-  scatter(ctx, Math.round(26 * qp.density) + 6, 30, 260, rnd, (x, z) => {
+  scatter(ctx, Math.round((floating ? 60 : 26) * qp.density) + 6, 30, 260, rnd, (x, z) => {
     const s = 4 + rnd() * 7;
-    const m = mat4(x, 16 + rnd() * 34, z, rnd() * 3, 1, rnd() * 0.8, rnd() * 0.8);
+    const m = mat4(x, floating ? (rnd() - 0.4) * 120 : 16 + rnd() * 34, z, rnd() * 3, 1, rnd() * 0.8, rnd() * 0.8);
     addWireBox(batch, m, s, s, s, rnd() < 0.3 ? C2 : C1, 1.6, 0.16);
     const c = new THREE.Vector3(0, s / 2, 0).applyMatrix4(m);
     glow.add(c.x, c.y, c.z, C1, 0.35, s * 1.6, 3, 0.3);
   });
 
   // giant light pillars on the horizon
-  scatter(ctx, 12, 320, 620, rnd, (x, z, d, i) => {
+  scatter(ctx, floating ? 0 : 12, 320, 620, rnd, (x, z, d, i) => {
     const col = i % 3 === 0 ? C2 : C1;
     const m = mat4(x, -0.6, z);
     batch.add('neon', boxGeo(1.6, 420, 1.6, 0, 210, 0), m, col, 1.4);
