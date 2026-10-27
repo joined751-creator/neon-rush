@@ -353,24 +353,57 @@ export class Race {
     }
   }
 
+  /**
+   * v5.1 car-to-car contact: each car is a chain of three circles along its length (nose, middle, tail) instead
+   * of one round blob, so long cars no longer sink into each other nose-to-tail; the deepest circle pair decides
+   * the push-out direction and the bounce.
+   */
   collideCars() {
-    const R = CAR.RADIUS;
     const cars = this.cars;
+    const C = this._cc || (this._cc = new Map());
+    const shape = (c) => {
+      let sh = C.get(c);
+      if (!sh) {
+        const d = c.model.dims;
+        const r = Math.min(1.05, d.W / 2);
+        sh = { r, off: Math.max(0, d.L / 2 - r * 0.9), reach: d.L / 2 + 0.2 };
+        C.set(c, sh);
+      }
+      return sh;
+    };
     for (let i = 0; i < cars.length; i++) {
       const a = cars[i];
       if (a.eliminated || a.ghostTime > 0) continue;
+      const sa = shape(a);
+      const afx = Math.sin(a.heading), afz = Math.cos(a.heading);
       for (let j = i + 1; j < cars.length; j++) {
         const b = cars[j];
         if (b.eliminated || b.ghostTime > 0) continue;
-        const dx = b.x - a.x, dz = b.z - a.z;
-        const d2 = dx * dx + dz * dz;
-        if (d2 > 4 * R * R || Math.abs(a.y - b.y) > 2) continue;
-        const d = Math.sqrt(d2) || 0.01;
-        const nx = dx / d, nz = dz / d;
-        const ma = a.type.weight * (a.shieldTime > 0 ? 3 : 1), mb = b.type.weight * (b.shieldTime > 0 ? 3 : 1);
-        const overlap = 2 * R - d;
-        a.x -= nx * overlap * (mb / (ma + mb)); a.z -= nz * overlap * (mb / (ma + mb));
-        b.x += nx * overlap * (ma / (ma + mb)); b.z += nz * overlap * (ma / (ma + mb));
+        const sb = shape(b);
+        const dx0 = b.x - a.x, dz0 = b.z - a.z;
+        const lim = sa.reach + sb.reach;
+        if (dx0 * dx0 + dz0 * dz0 > lim * lim || Math.abs(a.y - b.y) > 2) continue;
+        const bfx = Math.sin(b.heading), bfz = Math.cos(b.heading);
+        const rr = sa.r + sb.r;
+        let best = 0, nx = 0, nz = 0;
+        for (const ka of [-1, 0, 1]) {
+          const ax = a.x + afx * sa.off * ka, az = a.z + afz * sa.off * ka;
+          for (const kb of [-1, 0, 1]) {
+            const bx = b.x + bfx * sb.off * kb, bz = b.z + bfz * sb.off * kb;
+            const dx = bx - ax, dz = bz - az;
+            const d2 = dx * dx + dz * dz;
+            if (d2 >= rr * rr) continue;
+            const d = Math.sqrt(d2) || 0.01;
+            const ov = rr - d;
+            if (ov > best) { best = ov; nx = dx / d; nz = dz / d; }
+          }
+        }
+        if (best <= 0) continue;
+        // in a chase the player shoves patrol cars aside more easily (solid contact made boxing-in too strong)
+        const hk = this.chase ? 2 : 1;
+        const ma = a.type.weight * (a.shieldTime > 0 ? 3 : 1) * (a.human ? hk : 1), mb = b.type.weight * (b.shieldTime > 0 ? 3 : 1) * (b.human ? hk : 1);
+        a.x -= nx * best * (mb / (ma + mb)); a.z -= nz * best * (mb / (ma + mb));
+        b.x += nx * best * (ma / (ma + mb)); b.z += nz * best * (ma / (ma + mb));
         const rel = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
         if (rel < 0) {
           const jImp = (-(1 + CAR.CAR_BOUNCE) * rel) / (1 / ma + 1 / mb);
