@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryGrid';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">Новое в 5.0</span><span class="nb-t">Цифровой мир: трасса «Сетка» и болид «Вектор»<small>Светящаяся сетка, световые ленты за машинами и машина из света</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">Новое в 5.1</span><span class="nb-t">Все машины — в световом стиле<small>Чёрный глянец и контур из света, мягкий звук мотора, трасса «Сетка»</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {

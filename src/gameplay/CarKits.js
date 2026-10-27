@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 /*
  * v4.4 new cars: body specs + their own body kits, plugged into the procedural car builder (CarModel).
- *  - «Импульс EV» — electric supercar: long fastback, glass roof, no exhaust pipes, full-width light bars
- *    front and back, neon lines along the sides; boost "flames" are electric blue/violet plasma (see CarFX).
+ *  - «Импульс EV» — electric supercar: long fastback, glass roof, no exhaust pipes; boost "flames" are electric
+ *    blue/violet plasma (see CarFX).
  *  - «Буран 4×4» — rally off-roader: tall body, big tyres, high ground clearance, roof rack with spotlights,
  *    bull bar, wide black cladding, mud flaps and a spare wheel on the tailgate.
  */
@@ -39,32 +39,9 @@ export const EXTRA_SPECS = {
 
 /** Extra parts for the new kits. ctx = { kit, S, B, M, add, ghost, nose, tail } from the builder. */
 export function buildKitExtras({ kit, S, B, M, add, ghost, nose, tail }) {
-  if (kit.lightLines) lightParts(S, B, M, add, ghost, nose, tail);
-  else if (kit.ev) evParts(S, B, M, add, ghost, nose, tail);
+  // v5.1: every car wears the light-car look (black gloss + light contour in the player's colour)
+  lightParts(S, B, M, add, ghost, nose, tail);
   if (kit.offroad) offroadParts(S, B, M, add, ghost, nose, tail);
-}
-
-function evParts(S, B, M, add, ghost, nose, tail) {
-  // full-width light bars (front: white, back: red) — the signature of a modern EV
-  const fz = nose - 0.12, fy = B.top(fz) - 0.06;
-  const front = add(new THREE.BoxGeometry(B.hw(fz) * 1.7, 0.028, 0.04), M.head);
-  front.position.set(0, fy, fz);
-  const rz = tail + 0.06, ry = B.top(rz) - 0.07;
-  const rear = add(new THREE.BoxGeometry(B.hw(rz) * 1.8, 0.035, 0.04), M.tail);
-  rear.position.set(0, ry, rz);
-  // neon accent lines along the sides (paint colour)
-  if (!ghost) {
-    for (const side of [-1, 1]) {
-      const z0 = S.wr + S.r + 0.12, z1 = S.wf - S.r - 0.12;
-      const zm = (z0 + z1) / 2;
-      const y = B.bot(zm) + (B.top(zm) - B.bot(zm)) * 0.28;
-      const line = add(new THREE.BoxGeometry(0.012, 0.022, z1 - z0), M.neon);
-      line.position.set(side * (B.hw(zm) + B.flare(zm) + 0.012), y, zm);
-    }
-  }
-  // charge-port light and a smooth "frunk" panel instead of a grille
-  const port = add(new THREE.BoxGeometry(0.02, 0.05, 0.12), M.neon);
-  port.position.set(-(B.hw(S.wr + 0.55) + 0.01), B.top(S.wr + 0.55) - 0.12, S.wr + 0.55);
 }
 
 function offroadParts(S, B, M, add, ghost, nose, tail) {
@@ -135,7 +112,7 @@ function offroadParts(S, B, M, add, ghost, nose, tail) {
   }
 }
 
-/** v5.0 light car: black gloss paint, light tubes along the shoulders (arching over the wheels), the sills,
+/** v5.0 light car (v5.1: all cars): black gloss paint, light tubes along the shoulders (arching over the wheels), the sills,
  * the canopy spine, around the wheel arches and across the nose and tail. */
 function lightParts(S, B, M, add, ghost, nose, tail) {
   if (!ghost) {
