@@ -1,16 +1,19 @@
 import { CAR_TYPES } from '../core/Constants.js';
+import './DigitalUI.js';
+import { TRACKS } from '../level/TrackDefs.js';
 import { eventBus, Events } from '../core/EventBus.js';
 
 /*
- * v4.4 "new cars" UI: class + type line and a «Новая» badge on the garage card of the new cars,
+ * v4.4 / v5.0 "new cars" UI: class + type line and a «Новая» badge on the garage card of the new cars,
  * and the "Новое в 4.4" title banner that opens the garage on the new electric car.
  */
 
 const META = {
   pulse: { cls: 'S', tag: 'Электро-суперкар' },
   buran: { cls: 'B', tag: 'Ралли-внедорожник' },
+  vector: { cls: 'S', tag: 'Световой болид' },
 };
-const NEW = new Set(Object.keys(META));
+const NEW = new Set(['vector']);
 
 const CSS = `
 .gp-name .cu-new { display: inline-block; vertical-align: middle; margin-left: 10px; padding: 2px 7px; border-radius: 3px; font: 700 10px var(--f-mono);
@@ -33,10 +36,13 @@ export class CarsUI {
     menus.renderGP = (p) => { renderGP(p); this.decorate(p); };
 
     eventBus.on(Events.UI_ACTION, ({ action }) => {
-      if (action !== 'tryCars') return;
-      const i = CAR_TYPES.findIndex((t) => t.id === 'pulse');
+      if (action !== 'tryGrid') return;
+      // v5.0: the banner opens the digital world — «Сетка» track + the «Вектор» light car
+      const i = CAR_TYPES.findIndex((t) => t.id === 'vector');
       if (i >= 0) game.gs.garage[0].type = i;
-      if (game.gs.settings.mode === 'gp' || game.gs.settings.mode === 'chase') game.gs.settings.mode = 'race';
+      const tr = TRACKS.findIndex((t) => t.id === 'grid');
+      if (tr >= 0) game.gs.settings.track = tr;
+      if (game.gs.settings.mode === 'gp') game.gs.settings.mode = 'race';
       game.gs.saveSettings();
       menus.show('setup');
       menus.action('garage');
@@ -47,10 +53,10 @@ export class CarsUI {
   banner() {
     const b = document.querySelector('.new-banner');
     if (!b) return;
-    b.dataset.action = 'tryCars';
+    b.dataset.action = 'tryGrid';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">Новое в 4.4</span><span class="nb-t">Две новые машины: «Импульс EV» и «Буран 4×4»<small>Электро-суперкар с плазменным бустом и раллийный внедорожник-таран</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">Новое в 5.0</span><span class="nb-t">Цифровой мир: трасса «Сетка» и болид «Вектор»<small>Светящаяся сетка, световые ленты за машинами и машина из света</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {

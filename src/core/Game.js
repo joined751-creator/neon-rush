@@ -75,7 +75,9 @@ export class Game {
   startAttract() {
     this.disposeRace();
     this.render.setScene(this.scene);
-    const track = Math.floor(Math.random() * TRACKS.length);
+    // v5.0: the title screen shows the digital world most of the time
+    const gridI = TRACKS.findIndex((t) => t.theme === 'grid');
+    const track = gridI >= 0 && Math.random() < 0.65 ? gridI : Math.floor(Math.random() * TRACKS.length);
     this.race = new Race({
       scene: this.scene, render: this.render, settings: { ...this.gs.settings, track, mirror: false, items: true },
       garage: this.gs.garage, gameState: this.gs, input: this.input, demo: true,
