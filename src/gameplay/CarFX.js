@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { eventBus, Events } from '../core/EventBus.js';
+import { LightRibbons } from './LightRibbons.js';
 
 /**
  * v4.2 cars & effects:
@@ -140,6 +141,8 @@ export class CarFX {
     });
     this.smokeTint = new THREE.Color(0x8a84a0).lerp(new THREE.Color(theme.wall), 0.22).getHex();
     this.wet = (theme.wet ?? 0) > 0;
+    // v5.0 digital world: light ribbons behind every car
+    this.ribbons = theme.ribbons ? new LightRibbons(scene, cars) : null;
   }
 
   // ---------------------------------------------------------------- reflections
@@ -173,6 +176,7 @@ export class CarFX {
   // ---------------------------------------------------------------- per frame
   update(dt, focus) {
     this.time += dt;
+    this.ribbons?.update(dt);
     for (const fl of this.flames) {
       fl.mat.uniforms.uTime.value += dt;
       const fls = fl.car.model.flames;
@@ -316,5 +320,6 @@ export class CarFX {
     this.blasts = [];
     for (const fl of this.flames) { fl.mat.dispose(); fl.sMat.dispose(); }
     this.cubeRT.dispose();
+    this.ribbons?.dispose();
   }
 }
