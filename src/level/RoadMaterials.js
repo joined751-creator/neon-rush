@@ -14,7 +14,7 @@ const COMMON = /* glsl */`
 
 const ROAD_PARS = /* glsl */`
   uniform sampler2D uDetail;
-  uniform float uLen, uLampGap, uWet, uFrost, uHalf;
+  uniform float uLen, uLampGap, uWet, uFrost, uHalf, uDigital;
   uniform vec3 uLine, uLamp, uKerbA, uKerbB, uAsphalt;
   varying vec4 vRoad;
   varying vec2 vRoad2;
@@ -137,6 +137,21 @@ const ROAD_MAIN = /* glsl */`
                + exp(-dr * dr / (2.0 * sig * sig)) * exp(-pow(x - uHalf * 0.72, 2.0) / 30.0);
     em += uLamp * pool * (0.045 + uWet * 0.08);
 
+    // v5.0 digital world: glossy black glass road, a faint light grid, bright light strips along the edges
+    if (uDigital > 0.0) {
+      float onRoad = 1.0 - shoulder;
+      col = mix(col, uAsphalt * (0.7 + grain * 0.35), 0.85);
+      float gS = rdBand(mod(s, 8.0), -0.05, 0.05, fws) + rdBand(mod(s, 8.0), 7.95, 8.05, fws);
+      float gX = rdBand(abs(ax - uHalf * 0.5), -0.04, 0.04, fwx) + rdBand(ax, -0.04, 0.04, fwx);
+      em += uLine * clamp(gS + gX, 0.0, 1.0) * 0.16 * onRoad * (1.0 - paint);
+      float strip = rdBand(ax, uHalf - 0.45, uHalf - 0.28, fwx) * (1.0 - kb);
+      em += uLine * strip * 2.6;
+      col = mix(col, uLine * 0.25, strip);
+      rough = mix(0.4, rough, kb);
+      metal = 0.12 * (1.0 - kb);
+      h *= 0.25;
+    }
+
     rdH = h * 0.012;
     rdRough = clamp(rough, 0.02, 1.0);
     rdMetal = metal;
@@ -162,7 +177,7 @@ export function roadMaterial(track, theme, envMap, qp) {
   const detail = asphaltDetailTexture(qp.q === 'low' ? 256 : 512);
   const wet = theme.wet ?? 0;
   const mat = new THREE.MeshStandardMaterial({
-    color: 0xffffff, roughness: 0.8, metalness: 0, envMap, envMapIntensity: wet ? 0.65 : 0.35,
+    color: 0xffffff, roughness: 0.8, metalness: 0, envMap, envMapIntensity: wet ? 0.65 : theme.digital ? 0.3 : 0.35,
   });
   const uniforms = {
     uDetail: { value: detail },
@@ -170,6 +185,7 @@ export function roadMaterial(track, theme, envMap, qp) {
     uLampGap: { value: lampSpacing(track, qp.poleGap) },
     uWet: { value: wet },
     uFrost: { value: theme.frost ?? 0 },
+    uDigital: { value: theme.digital ?? 0 },
     uHalf: { value: track.half },
     uLine: { value: new THREE.Color(theme.roadLine) },
     uLamp: { value: new THREE.Color(theme.lamp ?? 0xffd2a0) },

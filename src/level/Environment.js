@@ -7,6 +7,7 @@ import { buildGround, buildMountains, buildSkyline } from './Terrain.js';
 import { Dressing } from './Dressing.js';
 import { buildScenery } from './Scenery.js';
 import { buildSpace } from './SpaceScenery.js';
+import { buildGrid } from './GridWorld.js';
 import { buildWeather } from './Weather.js';
 
 /**
@@ -117,7 +118,7 @@ export class Environment {
     this.dressing = new Dressing(ctx);
     for (const o of this.dressing.objects) this.group.add(o);
     lap('dressing');
-    if (theme.props === 'space') buildSpace(ctx); else buildScenery(ctx);
+    if (theme.props === 'space') buildSpace(ctx); else if (theme.props === 'grid') buildGrid(ctx); else buildScenery(ctx);
     lap('scenery');
 
     const metal = batch.mesh('metal', new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.38, envMapIntensity: 1.1 }));
