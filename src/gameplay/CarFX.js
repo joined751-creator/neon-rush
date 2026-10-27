@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { eventBus, Events } from '../core/EventBus.js';
-import { LightRibbons } from './LightRibbons.js';
+import { NeonEcho } from './NeonEcho.js';
 import { VoxelFX } from './VoxelFX.js';
 
 /**
@@ -142,8 +142,8 @@ export class CarFX {
     });
     this.smokeTint = new THREE.Color(0x8a84a0).lerp(new THREE.Color(theme.wall), 0.22).getHex();
     this.wet = (theme.wet ?? 0) > 0;
-    // v5.0 digital world: light ribbons behind every car
-    this.ribbons = theme.ribbons ? new LightRibbons(scene, cars) : null;
+    // v5.4 «Неоновое эхо»: holographic echoes of the car on nitro / boost / high drift (replaces the light ribbons)
+    this.echo = new NeonEcho(scene, cars);
     // v5.2: light-cube effects (rez-in at the start, derez on wrecks, re-spawn columns)
     this.voxels = theme.digital ? new VoxelFX(scene, cars) : null;
   }
@@ -179,7 +179,6 @@ export class CarFX {
   // ---------------------------------------------------------------- per frame
   update(dt, focus) {
     this.time += dt;
-    this.ribbons?.update(dt);
     this.voxels?.update(dt);
     for (const fl of this.flames) {
       fl.mat.uniforms.uTime.value += dt;
@@ -196,6 +195,7 @@ export class CarFX {
     }
     const viewers = this.cars.filter((c) => c.human);
     if (!viewers.length && focus) viewers.push(focus);
+    this.echo.update(dt, viewers);
     for (const L of this.lod) {
       let d2 = Infinity;
       for (const v of viewers) d2 = Math.min(d2, (v.x - L.car.x) ** 2 + (v.z - L.car.z) ** 2);
@@ -324,7 +324,7 @@ export class CarFX {
     this.blasts = [];
     for (const fl of this.flames) { fl.mat.dispose(); fl.sMat.dispose(); }
     this.cubeRT.dispose();
-    this.ribbons?.dispose();
+    this.echo.dispose();
     this.voxels?.dispose();
   }
 }

@@ -4,11 +4,12 @@ import { eventBus, Events } from '../core/EventBus.js';
 
 /*
  * OVERDRIVE — the "wow" moment: fill the nitro tank to 100% and fire it in one go.
- * For a few seconds the car turns into a neon comet: rainbow energy trail, electric sparks, wide FOV warp,
+ * For a few seconds the car turns into a neon comet: rainbow echoes and arrows, electric sparks, wide FOV warp,
  * rivals that get touched spin away. Plus a cinematic orbit camera when a player crosses the finish line.
  */
 
 const N = 26; // trail points
+const TRAIL = false; // v5.4: no light stripe behind the car — Overdrive shows as rainbow «Неоновое эхо» (NeonEcho)
 const _dir = new THREE.Vector3();
 const FW_COLORS = [0xff2bd6, 0x00e5ff, 0xffd400, 0x39ff88, 0x8a5cff, 0xff6a3d];
 const VERT = /* glsl */`
@@ -227,7 +228,7 @@ export class OverdriveFX {
 
   updateTrail(it, dt) {
     const car = it.car;
-    it.mesh.visible = it.level > 0.02 && car.model.root.visible;
+    it.mesh.visible = TRAIL && it.level > 0.02 && car.model.root.visible;
     if (!it.mesh.visible) { it.hist[0].length = it.hist[1].length = 0; return; }
     it.mat.uniforms.uTime.value = this.time;
     const fx = Math.sin(car.heading), fz = Math.cos(car.heading), rx = -fz, rz = fx;
