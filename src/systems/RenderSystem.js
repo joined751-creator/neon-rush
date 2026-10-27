@@ -264,14 +264,25 @@ export class RenderSystem {
     const dpr = Math.min(window.devicePixelRatio || 1,
       this.quality === 'high' ? GAME.MAX_DPR_HIGH : this.quality === 'medium' ? GAME.MAX_DPR_MED : GAME.MAX_DPR_LOW) * (this.scale ?? 1);
     this.dpr = dpr;
+    this.size = { W, H };
     this.renderer.setPixelRatio(dpr);
-    this.renderer.setSize(W, H);
+    // v4.4.2: the canvas keeps its CSS size (100% of the screen). Phones sometimes report the old (portrait) size
+    // during a rotation / fullscreen switch; with a fixed pixel size the picture then filled only part of the screen
+    // and the rest stayed black. Now it is at worst stretched for a frame, and fixed by checkSize() right after.
+    this.renderer.setSize(W, H, false);
     this.composer.setPixelRatio(dpr);
     this.composer.setSize(W, H);
     this.bloom.resolution.set(W * dpr * 0.5, H * dpr * 0.5);
     this.fxaa.uniforms.resolution.value.set(1 / Math.max(1, W * dpr), 1 / Math.max(1, H * dpr));
     this.cine.setViews(this.views, W, H);
     this.updateAspects();
+  }
+
+  /** v4.4.2: called every frame — re-fits the canvas when the window size changed without a (timely) resize event. */
+  checkSize() {
+    const W = window.innerWidth, H = window.innerHeight;
+    if (W > 0 && H > 0 && (W !== this.size?.W || H !== this.size?.H)) { this.resize(); return true; }
+    return false;
   }
 
   setSpeedFX(str) {

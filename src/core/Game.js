@@ -297,6 +297,8 @@ export class Game {
   // ---------------------------------------------------------------- loop
   loop() {
     const raw = this.clock.getDelta();
+    // v4.4.2: phones don't always send a resize event with the final size after rotating / going fullscreen
+    if (this.render.checkSize()) { this.updateRotate(); this.hud.layout(); if (this.state === 'race') this.mobile.calibrateTilt(); }
     const dt = Math.min(raw, GAME.MAX_DELTA);
     this.time += dt;
     this.adaptPerformance(raw);
