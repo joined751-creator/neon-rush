@@ -9,6 +9,16 @@ import * as THREE from 'three';
  */
 
 export const EXTRA_SPECS = {
+  // v5.0 «Вектор» — light car of the digital world: long low wedge, small bubble canopy, black gloss body,
+  // its outline traced by continuous light lines in the player's colour
+  vector: {
+    L: 4.85, W: 2.06, r: 0.36, tireW: 0.33, wf: 1.5, wr: -1.5, bot: 0.14,
+    top: [[-2.42, 0.8], [-2.05, 0.86], [-0.9, 0.88], [0.6, 0.76], [1.6, 0.58], [2.28, 0.44], [2.42, 0.36]],
+    cabin: { zA: 0.75, zB: 0.0, zC: -0.95, zD: -1.85, roof: 1.12, tumble: 0.6 },
+    plan: { front: 0.9, frontK: 0.45, rear: 0.45, rearK: 0.15 },
+    flare: 0.08, frontPeak: 0.03, rearHaunch: 0.06,
+    kit: { spoiler: 'lip', exhaust: 2, caliper: 0x0a0c12, rimStyle: 10, ev: true, glassRoof: true, lightLines: true },
+  },
   pulse: {
     L: 4.7, W: 2.02, r: 0.36, tireW: 0.31, wf: 1.48, wr: -1.44, bot: 0.17,
     top: [[-2.35, 0.88], [-1.95, 0.95], [-0.9, 0.97], [0.8, 0.8], [1.7, 0.62], [2.22, 0.5], [2.35, 0.42]],
@@ -29,7 +39,8 @@ export const EXTRA_SPECS = {
 
 /** Extra parts for the new kits. ctx = { kit, S, B, M, add, ghost, nose, tail } from the builder. */
 export function buildKitExtras({ kit, S, B, M, add, ghost, nose, tail }) {
-  if (kit.ev) evParts(S, B, M, add, ghost, nose, tail);
+  if (kit.lightLines) lightParts(S, B, M, add, ghost, nose, tail);
+  else if (kit.ev) evParts(S, B, M, add, ghost, nose, tail);
   if (kit.offroad) offroadParts(S, B, M, add, ghost, nose, tail);
 }
 
@@ -122,4 +133,54 @@ function offroadParts(S, B, M, add, ghost, nose, tail) {
     cap.position.set(0, spare.position.y, spare.position.z - 0.105);
     cap.rotation.y = Math.PI;
   }
+}
+
+/** v5.0 light car: black gloss paint, light tubes along the shoulders (arching over the wheels), the sills,
+ * the canopy spine, around the wheel arches and across the nose and tail. */
+function lightParts(S, B, M, add, ghost, nose, tail) {
+  if (!ghost) {
+    M.paint.color.set(0x07090e);
+    M.paint.metalness = 0.55;
+    M.paint.roughness = 0.22;
+  }
+  const tube = (pts, r = 0.016) => {
+    const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
+    return add(new THREE.TubeGeometry(curve, Math.max(12, pts.length * 3), r, 5, false), M.neon);
+  };
+  const R = S.r + 0.075;
+  for (const side of [-1, 1]) {
+    // shoulder line: mid-height of the flank, lifting over each wheel arch
+    const sh = [];
+    for (let z = tail + 0.12; z <= nose - 0.2; z += 0.08) {
+      const bot = B.bot(z), top = B.top(z);
+      const mid = bot + (top - bot) * 0.42;
+      const a = B.arch(z);
+      const y = Math.max(mid, a > 0 ? a + 0.035 : -1);
+      sh.push([side * (B.hw(z) + B.flare(z) + 0.012), y, z]);
+    }
+    tube(sh, 0.018);
+    // sill line between the wheels
+    const sl = [];
+    for (let z = S.wr + R + 0.06; z <= S.wf - R - 0.06; z += 0.1) sl.push([side * (B.hw(z) * 0.985 + B.flare(z) * 0.85 + 0.014), B.bot(z) + 0.13, z]);
+    tube(sl, 0.014);
+    // arch rings
+    for (const wz of [S.wf, S.wr]) {
+      const ring = add(new THREE.TorusGeometry(S.r + 0.12, 0.013, 4, 24, Math.PI), M.neon);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.set(side * (B.hw(wz) + B.flare(wz) * 0.9 + 0.02), S.r, wz);
+    }
+  }
+  // canopy spine
+  const C = S.cabin, sp = [];
+  for (let z = C.zD - 0.1; z <= C.zA + 0.1; z += 0.08) sp.push([0, B.glassTop(z) + 0.012, z]);
+  tube(sp, 0.013);
+  // full-width light bars: white across the nose, red across the tail (+ thin colour line above it)
+  const fz = nose - 0.1;
+  const front = add(new THREE.BoxGeometry(B.hw(fz) * 1.75, 0.026, 0.035), M.head);
+  front.position.set(0, B.top(fz) - 0.07, fz + 0.01);
+  const rz = tail + 0.05;
+  const rear = add(new THREE.BoxGeometry(B.hw(rz) * 1.85, 0.04, 0.035), M.tail);
+  rear.position.set(0, B.top(rz) - 0.08, rz - 0.01);
+  const rear2 = add(new THREE.BoxGeometry(B.hw(rz) * 1.7, 0.012, 0.03), M.neon);
+  rear2.position.set(0, B.top(rz) - 0.025, rz - 0.01);
 }
