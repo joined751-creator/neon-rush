@@ -5,6 +5,7 @@ import { TRACK_ACCENT } from '../ui/TrackThumbs.js';
 import { CAR_PRICE } from '../core/Progress.js';
 import { boxGeo } from './WorldKit.js';
 import { buildSkyline } from './Terrain.js';
+import { buildGridLife } from './GridLife.js';
 
 /*
  * v5.0 "Цифровой мир": an original digital-world theme — black glossy floor with a glowing cyan grid and running
@@ -194,6 +195,7 @@ export function buildGrid(ctx) {
   const C1 = theme.wall, C2 = theme.wall2;
   const floating = !!theme.floating;
   digitalGround(ctx);
+  buildGridLife(ctx); // v5.3: runners, terraces, circuit traces, sky streams, pixel dust
   // distant data-city ring: dark blocks with windows in the world's two colours (a dense, closer ring in the city)
   if (!floating) {
     const dense = theme.denseCity;
