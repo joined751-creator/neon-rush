@@ -68,6 +68,15 @@ html, body { background: var(--ink); }
 #divider { background: linear-gradient(#00e5ff, #ff7a1a) !important; box-shadow: 0 0 18px #00e5ff !important; }
 .standings tr.me td:first-child { box-shadow: inset 3px 0 0 #00e5ff !important; }
 
+/* v5.2 countdown: digital start lights (bars, orange → cyan) and clean light numerals */
+.lights { background: rgba(1, 10, 16, 0.86) !important; border: 1px solid rgba(0, 229, 255, 0.35) !important; border-radius: 2px !important; box-shadow: 0 0 24px rgba(0,229,255,0.18) !important; }
+.lights i { background: transparent !important; border: 1px solid rgba(0, 229, 255, 0.22); border-radius: 2px !important; gap: 6px !important; }
+.lights u { width: 34px !important; height: 9px !important; border-radius: 1px !important; background: rgba(0, 229, 255, 0.07) !important; box-shadow: none !important; }
+.lights.on1 i:nth-child(1) u, .lights.on2 i:nth-child(-n+2) u, .lights.on3 i u { background: #ff7a1a !important; box-shadow: 0 0 14px #ff7a1a, 0 0 26px rgba(255,122,26,0.5) !important; }
+.lights.go i u { background: #00e5ff !important; box-shadow: 0 0 16px #00e5ff, 0 0 30px rgba(0,229,255,0.55) !important; }
+.cnum span { font-family: var(--f-display) !important; font-style: normal !important; letter-spacing: 0.04em; color: #eafcff !important; }
+.cnum .burst { border-radius: 2px !important; border-color: #00e5ff !important; box-shadow: 0 0 30px #00e5ff, inset 0 0 30px rgba(0,229,255,0.4) !important; }
+
 /* faint scan lines over the menus (static texture, no animation) */
 .screen::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 30;
   background: repeating-linear-gradient(0deg, rgba(0, 229, 255, 0.035) 0 1px, transparent 1px 3px); mix-blend-mode: screen; }
