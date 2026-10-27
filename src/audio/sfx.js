@@ -50,7 +50,7 @@ export const sfx = {
   boost: (pan = 0) => { noise(0.6, 0.35, { lp: 800, sweep: 6000, pan }); tone(220, 'sawtooth', 0.5, 0.12, { to: 880, filter: 2500, pan }); },
   driftLevel: (lvl, pan = 0) => tone([0, 660, 880, 1175][lvl] || 880, 'square', 0.12, 0.12, { filter: 4000, pan }),
   wall: (amt = 1, pan = 0) => { noise(0.18, Math.min(0.5, 0.15 + amt * 0.02), { lp: 1800, pan }); tone(70, 'square', 0.15, 0.2, { to: 40, filter: 600, pan }); },
-  bump: (pan = 0) => { noise(0.12, 0.3, { lp: 1200, pan }); tone(110, 'square', 0.1, 0.18, { to: 60, filter: 800, pan }); },
+  bump: (pan = 0) => { noise(0.12, 0.2, { lp: 900, pan }); tone(100, 'sine', 0.1, 0.18, { to: 60, pan }); },
   pickup: (pan = 0) => [523, 659, 784, 1047].forEach((f, i) => tone(f, 'square', 0.08, 0.12, { delay: i * 0.05, filter: 5000, pan })),
   rocket: (pan = 0) => noise(0.7, 0.3, { lp: 300, sweep: 3000, pan }),
   explosion: (pan = 0) => { noise(0.9, 0.55, { lp: 2500, sweep: 120, pan }); tone(80, 'sine', 0.6, 0.4, { to: 30, pan }); },
@@ -69,6 +69,7 @@ export const sfx = {
   whoosh: (pan = 0) => noise(0.35, 0.18, { hp: 600, lp: 6000, pan }),
   firework: () => { noise(0.08, 0.25, { hp: 1500, lp: 8000 }); noise(1.0, 0.12, { lp: 1200, sweep: 200, delay: 0.05 }); },
   thunder: () => { noise(2.6, 0.45, { lp: 400, sweep: 60, delay: 0.4 }); noise(0.3, 0.3, { lp: 3000, sweep: 300 }); },
-  backfire: (pan = 0) => { noise(0.07, 0.35, { lp: 1800, pan }); tone(90, 'square', 0.06, 0.2, { to: 50, filter: 900, pan }); },
+  // v5.1: a soft low 'puff' instead of a sharp square-wave crack
+  backfire: (pan = 0) => { noise(0.08, 0.12, { lp: 650, pan }); tone(70, 'sine', 0.08, 0.14, { to: 45, pan }); },
   overtake: (pan = 0) => tone(988, 'triangle', 0.1, 0.08, { to: 1480, pan }),
 };

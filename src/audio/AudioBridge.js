@@ -3,81 +3,89 @@ import { sfx } from './sfx.js';
 import { Music } from './music.js';
 import { eventBus, Events } from '../core/EventBus.js';
 
-/** Synth engine voice per human car (stereo-panned in split screen). */
+/**
+ * v5.1 engine voice: a smooth "light-engine" hum instead of the old buzzy saw/square stack — a warm triangle
+ * fundamental, a soft sine sub-octave and a quiet fifth, gently detuned (chorus) through a soft low-pass with
+ * no resonance, a slow shimmer, and a breath of air noise at speed. Gear changes stay audible as smooth sweeps.
+ * Electric cars sing a little higher and cleaner. Tyre and boost layers are softer too.
+ */
 class EngineVoice {
   constructor(pan) {
     const ctx = A.ctx;
-    this.o1 = ctx.createOscillator(); this.o1.type = 'sawtooth';
-    this.o2 = ctx.createOscillator(); this.o2.type = 'square';
-    this.o3 = ctx.createOscillator(); this.o3.type = 'sawtooth';
-    this.f = ctx.createBiquadFilter(); this.f.type = 'lowpass'; this.f.Q.value = 4;
+    this.o1 = ctx.createOscillator(); this.o1.type = 'triangle';
+    this.o2 = ctx.createOscillator(); this.o2.type = 'sine';
+    this.o3 = ctx.createOscillator(); this.o3.type = 'sine';
+    this.o4 = ctx.createOscillator(); this.o4.type = 'triangle'; this.o4.detune.value = 9; // chorus partner of o1
+    this.f = ctx.createBiquadFilter(); this.f.type = 'lowpass'; this.f.Q.value = 0.5;
     this.g = ctx.createGain(); this.g.gain.value = 0;
     this.p = ctx.createStereoPanner(); this.p.pan.value = pan;
-    const g2 = ctx.createGain(); g2.gain.value = 0.5;
-    this.o1.connect(this.f); this.o2.connect(g2).connect(this.f); this.o3.connect(this.f);
-    this.f.connect(this.g).connect(this.p).connect(A.engine);
-    // tyre screech
+    const g1 = ctx.createGain(); g1.gain.value = 0.55;
+    const g2 = ctx.createGain(); g2.gain.value = 0.7;
+    const g3 = ctx.createGain(); g3.gain.value = 0.12;
+    const g4 = ctx.createGain(); g4.gain.value = 0.4;
+    this.o1.connect(g1).connect(this.f); this.o2.connect(g2).connect(this.f);
+    this.o3.connect(g3).connect(this.f); this.o4.connect(g4).connect(this.f);
+    // slow shimmer: a gentle tremolo that keeps the tone alive
+    this.trem = ctx.createGain(); this.trem.gain.value = 1;
+    this.lfo = ctx.createOscillator(); this.lfo.frequency.value = 5.5;
+    this.lfoG = ctx.createGain(); this.lfoG.gain.value = 0.06;
+    this.lfo.connect(this.lfoG).connect(this.trem.gain);
+    this.f.connect(this.trem).connect(this.g).connect(this.p).connect(A.engine);
+    // air rushing past at speed
+    this.a = ctx.createBufferSource(); this.a.buffer = A.noise; this.a.loop = true;
+    this.af = ctx.createBiquadFilter(); this.af.type = 'lowpass'; this.af.frequency.value = 700; this.af.Q.value = 0.3;
+    this.ag = ctx.createGain(); this.ag.gain.value = 0;
+    this.a.connect(this.af).connect(this.ag).connect(this.p);
+    // tyre screech (softer, less piercing)
     this.n = ctx.createBufferSource(); this.n.buffer = A.noise; this.n.loop = true;
-    this.nb = ctx.createBiquadFilter(); this.nb.type = 'bandpass'; this.nb.frequency.value = 1700; this.nb.Q.value = 6;
+    this.nb = ctx.createBiquadFilter(); this.nb.type = 'bandpass'; this.nb.frequency.value = 1200; this.nb.Q.value = 2.2;
     this.ng = ctx.createGain(); this.ng.gain.value = 0;
     this.n.connect(this.nb).connect(this.ng).connect(this.p);
     // boost whoosh
     this.b = ctx.createBufferSource(); this.b.buffer = A.noise; this.b.loop = true;
-    this.bf = ctx.createBiquadFilter(); this.bf.type = 'bandpass'; this.bf.frequency.value = 600; this.bf.Q.value = 1;
+    this.bf = ctx.createBiquadFilter(); this.bf.type = 'bandpass'; this.bf.frequency.value = 600; this.bf.Q.value = 0.8;
     this.bg = ctx.createGain(); this.bg.gain.value = 0;
     this.b.connect(this.bf).connect(this.bg).connect(this.p);
-    for (const s of [this.o1, this.o2, this.o3, this.n, this.b]) s.start();
+    this.srcs = [this.o1, this.o2, this.o3, this.o4, this.lfo, this.a, this.n, this.b];
+    for (const s of this.srcs) s.start();
   }
 
   update(car) {
-    if (car.type.ev) { this.updateEV(car); return; }
     const ctx = A.ctx, t = ctx.currentTime;
+    const ev = !!car.type.ev;
     const sr = Math.max(0, Math.min(1.25, Math.abs(car.speed) / car.topSpeed));
-    const gears = 5;
-    const gp = sr * gears;
-    const gear = Math.min(gears - 1, Math.floor(gp));
-    const rpm = 0.25 + (gp - gear) * 0.75 * (gear === 0 ? 1 : 0.85) + (car.controls.throttle > 0 && sr < 0.05 ? 0.25 : 0);
-    const base = 38 + rpm * 120 + gear * 6;
-    this.o1.frequency.setTargetAtTime(base, t, 0.04);
-    this.o2.frequency.setTargetAtTime(base * 0.5, t, 0.04);
-    this.o3.frequency.setTargetAtTime(base * 1.505, t, 0.04);
-    this.f.frequency.setTargetAtTime(300 + rpm * 1600 + (car.controls.throttle ? 500 : 0), t, 0.05);
-    const vol = car.eliminated ? 0 : 0.35 + car.controls.throttle * 0.35 + (car.boosting ? 0.2 : 0);
-    this.g.gain.setTargetAtTime(vol, t, 0.08);
-    const slide = !car.airborne && (car.drifting || Math.abs(car.lateralSpeed) > 6 || car.spinTime > 0) ? 0.22 : 0;
-    this.ng.gain.setTargetAtTime(slide, t, 0.05);
-    this.nb.frequency.setTargetAtTime(1500 + (car.driftLevel || 0) * 250, t, 0.1);
-    this.bg.gain.setTargetAtTime(car.boosting ? 0.25 : 0, t, 0.1);
-    this.bf.frequency.setTargetAtTime(car.boosting ? 1800 : 400, t, 0.2);
-  }
-
-  /** v4.4 electric car: a clean rising whine (no gears, no rumble) + the same tyre and boost layers. */
-  updateEV(car) {
-    const ctx = A.ctx, t = ctx.currentTime;
-    if (!this.ev) {
-      this.ev = true;
-      this.o1.type = 'sine'; this.o2.type = 'triangle'; this.o3.type = 'sine';
+    const thr = car.controls.throttle > 0 ? 1 : 0;
+    let base;
+    if (ev) {
+      base = 95 + sr * 330 + thr * 12; // one smooth rising tone, no gears
+    } else {
+      const gears = 5, gp = sr * gears;
+      const gear = Math.min(gears - 1, Math.floor(gp));
+      const rpm = 0.3 + (gp - gear) * 0.7 * (gear === 0 ? 1 : 0.8) + (thr && sr < 0.05 ? 0.2 : 0);
+      base = 62 + rpm * 85 + gear * 9;
     }
-    const sr = Math.max(0, Math.min(1.25, Math.abs(car.speed) / car.topSpeed));
-    const f = 110 + sr * 1050 + (car.controls.throttle > 0 ? 40 : 0);
-    this.o1.frequency.setTargetAtTime(f, t, 0.05);
-    this.o2.frequency.setTargetAtTime(f * 0.5, t, 0.05);
-    this.o3.frequency.setTargetAtTime(f * 2.01, t, 0.05);
-    this.f.frequency.setTargetAtTime(1800 + sr * 3200, t, 0.08);
-    const vol = car.eliminated ? 0 : 0.16 + car.controls.throttle * 0.2 + (car.boosting ? 0.15 : 0);
-    this.g.gain.setTargetAtTime(vol, t, 0.08);
-    const slide = !car.airborne && (car.drifting || Math.abs(car.lateralSpeed) > 6 || car.spinTime > 0) ? 0.22 : 0;
-    this.ng.gain.setTargetAtTime(slide, t, 0.05);
-    this.bg.gain.setTargetAtTime(car.boosting ? 0.3 : 0, t, 0.1);
-    this.bf.frequency.setTargetAtTime(car.boosting ? 2600 : 600, t, 0.2);
+    const k = 0.06;
+    this.o1.frequency.setTargetAtTime(base, t, k);
+    this.o4.frequency.setTargetAtTime(base, t, k);
+    this.o2.frequency.setTargetAtTime(base * 0.5, t, k);
+    this.o3.frequency.setTargetAtTime(base * 1.5, t, k);
+    this.lfo.frequency.setTargetAtTime(4 + sr * 4, t, 0.2);
+    this.f.frequency.setTargetAtTime((ev ? 700 : 420) + sr * (ev ? 1500 : 1100) + thr * 180, t, 0.08);
+    const vol = car.eliminated ? 0 : (ev ? 0.27 : 0.34) + thr * 0.2 + (car.boosting ? 0.12 : 0);
+    this.g.gain.setTargetAtTime(vol, t, 0.1);
+    this.ag.gain.setTargetAtTime(car.eliminated || car.airborne ? 0 : Math.min(1, sr) * 0.05, t, 0.15);
+    this.af.frequency.setTargetAtTime(500 + sr * 900, t, 0.2);
+    const slide = !car.airborne && (car.drifting || Math.abs(car.lateralSpeed) > 6 || car.spinTime > 0) ? 0.11 : 0;
+    this.ng.gain.setTargetAtTime(slide, t, 0.08);
+    this.nb.frequency.setTargetAtTime(1050 + (car.driftLevel || 0) * 120, t, 0.1);
+    this.bg.gain.setTargetAtTime(car.boosting ? 0.16 : 0, t, 0.12);
+    this.bf.frequency.setTargetAtTime(car.boosting ? 1400 : 400, t, 0.25);
   }
 
   dispose() {
     const t = A.ctx.currentTime;
-    this.g.gain.setTargetAtTime(0, t, 0.05);
-    this.ng.gain.setTargetAtTime(0, t, 0.05);
-    this.bg.gain.setTargetAtTime(0, t, 0.05);
-    setTimeout(() => { for (const s of [this.o1, this.o2, this.o3, this.n, this.b]) { try { s.stop(); } catch { /* */ } } this.p.disconnect(); }, 300);
+    for (const g of [this.g, this.ng, this.bg, this.ag]) g.gain.setTargetAtTime(0, t, 0.05);
+    setTimeout(() => { for (const s of this.srcs) { try { s.stop(); } catch { /* */ } } this.p.disconnect(); }, 300);
   }
 }
 
