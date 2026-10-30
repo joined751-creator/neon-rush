@@ -2,7 +2,7 @@ import { CAR, CAR_TYPES, CAR_COLORS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { CURRENCY, UPGRADES, MAX_LEVEL, COLOR_PRICE, LEGEND_REWARD, GLOWS } from '../core/Progress.js';
 
-export const VERSION = 'v5.4';
+export const VERSION = 'v5.5';
 import { UI_ICONS } from './Icons.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
