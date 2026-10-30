@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { boxGeo, setViewHUniform } from './WorldKit.js';
 
 /*
@@ -10,6 +11,7 @@ import { boxGeo, setViewHUniform } from './WorldKit.js';
  *  - circuit traces: light lines on the floor leading away from the road edge, bending at 45° / 90°,
  *    ending in a pulsing node — like a circuit board seen from very close;
  *  - pixel dust: sparse tiny light squares drifting up around the camera (gives depth to the dark air).
+ * v5.5: searchlights — soft beams of light from beyond the skyline, slowly sweeping the night sky.
  * All of it is dim and thin, so the road and the cars stay the brightest things on screen.
  */
 
@@ -182,6 +184,81 @@ function buildDust(theme, qp, timeUniforms) {
   return pts;
 }
 
+// ------------------------------------------------------------------ v5.5 searchlights sweeping the sky
+const BEAM_VERT = /* glsl */`
+  attribute vec3 aBase;
+  attribute vec4 aSweep; // phase, speed, yaw0, tilt
+  attribute vec3 aCol;
+  uniform float uTime;
+  varying vec3 vN, vV, vCol;
+  varying float vH, vDist;
+  vec3 rot(vec3 p, float tilt, float yaw) {
+    float ct = cos(tilt), st = sin(tilt);
+    p = vec3(p.x, p.y * ct - p.z * st, p.y * st + p.z * ct);   // lean away from vertical
+    float cy = cos(yaw), sy = sin(yaw);
+    return vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy); // turn around the base
+  }
+  void main() {
+    float t = uTime * aSweep.y + aSweep.x;
+    float yaw = aSweep.z + sin(t) * 0.7;
+    float tilt = aSweep.w + sin(t * 0.63 + aSweep.x * 2.0) * 0.12;
+    vec3 w = aBase + rot(position, tilt, yaw);
+    vN = normalize(rot(normal, tilt, yaw));
+    vV = normalize(cameraPosition - w);
+    vH = position.y;
+    vDist = length(w - cameraPosition);
+    vCol = aCol;
+    gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
+  }
+`;
+const BEAM_FRAG = /* glsl */`
+  uniform float uFogFar;
+  varying vec3 vN, vV, vCol;
+  varying float vH, vDist;
+  void main() {
+    float core = pow(abs(dot(normalize(vN), normalize(vV))), 2.2); // bright along the axis, soft at the edges
+    float along = exp(-vH / 420.0) * smoothstep(0.0, 25.0, vH);   // strongest near the source, dissolving upwards
+    vec3 col = vCol * core * along * (1.0 - 0.55 * smoothstep(uFogFar * 0.6, uFogFar * 1.4, vDist));
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+function buildBeams(theme, b, R, rnd, qp, timeUniforms, floating) {
+  const n = qp.q === 'low' ? 4 : 7;
+  const cone = new THREE.CylinderGeometry(70, 4, 900, 24, 1, true).translate(0, 450, 0);
+  const geos = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rnd() * 0.6;
+    const r = R + 240 + rnd() * 260;
+    const g = cone.clone();
+    const cnt = g.attributes.position.count;
+    const base = [b.cx + Math.cos(a) * r, floating ? -120 : -2, b.cz + Math.sin(a) * r];
+    const sweep = [rnd() * 6.28, 0.12 + rnd() * 0.1, -a + Math.PI / 2 + (rnd() - 0.5) * 0.8, 0.3 + rnd() * 0.25];
+    const c = new THREE.Color(i % 3 === 2 ? theme.wall2 : theme.wall).lerp(new THREE.Color(0xffffff), 0.25).multiplyScalar(0.75);
+    const fill = (arr, k) => { const out = new Float32Array(cnt * k); for (let j = 0; j < cnt; j++) out.set(arr, j * k); return out; };
+    g.setAttribute('aBase', new THREE.BufferAttribute(fill(base, 3), 3));
+    g.setAttribute('aSweep', new THREE.BufferAttribute(fill(sweep, 4), 4));
+    g.setAttribute('aCol', new THREE.BufferAttribute(fill([c.r, c.g, c.b], 3), 3));
+    g.deleteAttribute('uv');
+    geos.push(g);
+  }
+  cone.dispose();
+  const merged = mergeGeometries(geos, false);
+  for (const g of geos) g.dispose();
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: BEAM_VERT, fragmentShader: BEAM_FRAG,
+    uniforms: { uTime: { value: 0 }, uFogFar: { value: theme.fogFar } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  timeUniforms.push(mat.uniforms.uTime);
+  const m = new THREE.Mesh(merged, mat);
+  m.frustumCulled = false;
+  m.renderOrder = 2;
+  return m;
+}
+
 // ------------------------------------------------------------------ main
 export function buildGridLife(ctx) {
   const { track, theme, qp, b, batch, glow, group, timeUniforms, rnd, exclude } = ctx;
@@ -314,4 +391,6 @@ export function buildGridLife(ctx) {
 
   // ---- pixel dust
   group.add(buildDust(theme, qp, timeUniforms));
+  // ---- v5.5 searchlights
+  group.add(buildBeams(theme, b, R, rnd, qp, timeUniforms, floating));
 }

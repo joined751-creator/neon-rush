@@ -23,6 +23,7 @@ export class CameraRig {
 
   update(car, dt) {
     const mode = MODES[this.mode];
+    this.camera.userData.car = car; // v5.5: the render system reads it for the heat haze behind a boosting car
     // Camera follows a smoothed yaw that lags the car heading (shows drift angle)
     const target = car.heading;
     let d = target - this.yaw;
