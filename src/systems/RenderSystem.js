@@ -16,11 +16,25 @@ const SpeedShader = {
     uStr: { value: [0, 0] },
     uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 },
     uGrain: { value: 0.025 }, uTime: { value: 0 }, uCA: { value: 0.0022 }, uRain: { value: 0 }, uAspect: { value: 1.78 },
+    uHeat: { value: [new THREE.Vector3(), new THREE.Vector3()] },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform vec4 uRect[2]; uniform float uStr[2]; varying vec2 vUv;
     uniform vec3 uLift, uGain; uniform float uSat, uGrain, uTime, uCA, uRain, uAspect;
+    uniform vec3 uHeat[2]; // v5.5 heat haze behind a boosting car: frame uv of the exhausts + strength
+    vec2 heat(vec2 uv) {
+      vec2 o = vec2(0.0);
+      for (int i = 0; i < 2; i++) {
+        vec3 H = uHeat[i];
+        if (H.z <= 0.0) continue;
+        vec2 d = (uv - H.xy + vec2(0.0, 0.045)) * vec2(uAspect, 1.0) / vec2(0.16, 0.09);
+        float m = exp(-dot(d, d));
+        o += vec2(sin(uv.y * 170.0 + uTime * 31.0) + 0.5 * sin(uv.y * 410.0 - uTime * 47.0),
+                  cos(uv.x * 140.0 - uTime * 26.0)) * 0.0028 * H.z * m;
+      }
+      return o;
+    }
     // v4.2 raindrops on the lens (Neon City): round drops that appear, sit, some slide down; each bends the picture
     vec3 dropLayer(vec2 uv, float t, float sc, float seed) {
       vec2 p = uv * vec2(uAspect, 1.0) * sc;
@@ -51,7 +65,7 @@ const SpeedShader = {
       return max(c, vec3(0.0));
     }
     void main(){
-      vec2 uv = vUv; float drop = 0.0;
+      vec2 uv = vUv + heat(vUv); float drop = 0.0;
       if (uRain > 0.0) { vec3 rd = rain(vUv); uv -= rd.xy * 0.018 * uRain; drop = rd.z * uRain; }
       float s = 0.0; vec2 c = vec2(0.5); vec4 r = vec4(0.0, 0.0, 1.0, 1.0);
       for (int i = 0; i < 2; i++) {
@@ -165,6 +179,11 @@ export class RenderSystem {
     this.lightDir = null;
     this._lp = new THREE.Vector3();
     this._lights = [{ x: 0, y: 0, s: 0 }, { x: 0, y: 0, s: 0 }];
+    this._hz = [-1, -1];
+    this._heatLvl = [0, 0];
+    this._hp = new THREE.Vector3();
+    this._hd = new THREE.Vector3();
+    this._ht = performance.now();
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);
     this.composer.addPass(new OutputPass());
@@ -201,15 +220,39 @@ export class RenderSystem {
     this.lightsOn = !!(fx && this.lightDir);
   }
 
-  /** Screen position of the light source in every view (frame uv) + strength fading at the screen edges. */
+  /** Screen position of the light source in every view (frame uv) + strength fading at the screen edges.
+   * v5.5: also the horizon line of every view (road reflections) and the heat haze behind boosting cars. */
   updateLights() {
+    const now = performance.now(), dt = Math.min(0.1, (now - this._ht) / 1000);
+    this._ht = now;
+    const heat = this.speedPass.uniforms.uHeat.value;
     for (let i = 0; i < 2; i++) {
       const v = this.views[i], o = this._lights[i];
       o.s = 0;
-      if (!v || !this.lightsOn) continue;
+      this._hz[i] = -1;
+      heat[i].set(0, 0, 0);
+      if (!v) continue;
       const cam = v.camera;
       cam.updateMatrixWorld();
       cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
+      // horizon: a point far ahead at the camera's own height
+      cam.getWorldDirection(this._hd);
+      this._hd.y = 0;
+      if (this._hd.lengthSq() > 1e-6) {
+        this._hd.normalize();
+        const h = this._hp.copy(this._hd).multiplyScalar(Math.min(2000, cam.far * 0.6)).add(cam.position).project(cam);
+        if (h.z < 1 && h.z > -1) this._hz[i] = v.y + (Math.max(-1.2, Math.min(1.2, h.y)) * 0.5 + 0.5) * v.h;
+      }
+      // heat haze: the air shimmers behind the exhausts of a boosting car
+      const car = cam.userData.car;
+      const want = car && !car.eliminated && car.model?.root.visible ? (car.overdrive > 0 ? 1.4 : car.boosting ? 1 : 0) : 0;
+      this._heatLvl[i] += (want - this._heatLvl[i]) * Math.min(1, dt * (want ? 6 : 2.5));
+      if (this._heatLvl[i] > 0.02 && car) {
+        const fx = Math.sin(car.heading), fz = Math.cos(car.heading), rear = (car.model.dims?.rear ?? -2.2) - 0.5;
+        const p = this._hp.set(car.x + fx * rear, car.y + 0.55, car.z + fz * rear).project(cam);
+        if (p.z < 1 && p.z > -1) heat[i].set(v.x + (p.x * 0.5 + 0.5) * v.w, v.y + (p.y * 0.5 + 0.5) * v.h, this._heatLvl[i]);
+      }
+      if (!this.lightsOn) continue;
       const p = this._lp.copy(this.lightDir).multiplyScalar(900).add(cam.position).project(cam);
       if (p.z > 1 || p.z < -1) continue; // behind the camera
       const edge = Math.max(Math.abs(p.x), Math.abs(p.y));
@@ -218,6 +261,7 @@ export class RenderSystem {
       o.y = v.y + (p.y * 0.5 + 0.5) * v.h;
     }
     this.cine.setLights(this._lights);
+    this.cine.setHorizon(this._hz[0], this._hz[1]);
   }
 
   setQuality(q) {
