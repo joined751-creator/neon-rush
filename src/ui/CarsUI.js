@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryGrid';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">Новое в 5.5</span><span class="nb-t">Кино-картинка<small>Огни отражаются в дороге, по небу ходят прожекторы, а за машиной на нитро дрожит воздух</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">Новое в 5.5</span><span class="nb-t">Прожекторы в небе<small>Над каждой трассой мягко ходят световые лучи в её цветах</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {
