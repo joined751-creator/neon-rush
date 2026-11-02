@@ -39,8 +39,9 @@ export const EXTRA_SPECS = {
 
 /** Extra parts for the new kits. ctx = { kit, S, B, M, add, ghost, nose, tail } from the builder. */
 export function buildKitExtras({ kit, S, B, M, add, ghost, nose, tail }) {
-  // v5.1: every car wears the light-car look (black gloss + light contour in the player's colour)
+  // v5.1: every car wears the light-car look; v5.6: real paint in the player's colour + a thin light contour
   lightParts(S, B, M, add, ghost, nose, tail);
+  realParts({ S, B, M, add, ghost, nose, tail });
   if (kit.offroad) offroadParts(S, B, M, add, ghost, nose, tail);
 }
 
@@ -112,19 +113,16 @@ function offroadParts(S, B, M, add, ghost, nose, tail) {
   }
 }
 
-/** v5.0 light car (v5.1: all cars): black gloss paint, light tubes along the shoulders (arching over the wheels), the sills,
- * the canopy spine, around the wheel arches and across the nose and tail. */
+/** v5.0 light car (v5.1: all cars; v5.6: a real paint job + a thin light contour as an accent).
+ * The body keeps the player's colour as deep metallic paint; slim light lines run along the shoulders, the sills
+ * and the canopy spine, plus full-width LED bars across the nose and the tail. */
 function lightParts(S, B, M, add, ghost, nose, tail) {
-  if (!ghost) {
-    M.paint.color.set(0x07090e);
-    M.paint.metalness = 0.55;
-    M.paint.roughness = 0.22;
-  }
-  const tube = (pts, r = 0.016) => {
+  // a dimmer copy of the accent colour: the contour frames the car instead of drowning it in glow
+  const line = ghost ? M.neon : new THREE.MeshBasicMaterial({ color: M.accent.clone().multiplyScalar(1.5) });
+  const tube = (pts, r = 0.012) => {
     const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
-    return add(new THREE.TubeGeometry(curve, Math.max(12, pts.length * 3), r, 5, false), M.neon);
+    return add(new THREE.TubeGeometry(curve, Math.max(12, pts.length * 3), r, 5, false), line);
   };
-  const R = S.r + 0.075;
   for (const side of [-1, 1]) {
     // shoulder line: mid-height of the flank, lifting over each wheel arch
     const sh = [];
@@ -133,31 +131,124 @@ function lightParts(S, B, M, add, ghost, nose, tail) {
       const mid = bot + (top - bot) * 0.42;
       const a = B.arch(z);
       const y = Math.max(mid, a > 0 ? a + 0.035 : -1);
-      sh.push([side * (B.hw(z) + B.flare(z) + 0.012), y, z]);
+      sh.push([side * (B.hw(z) + B.flare(z) + 0.01), y, z]);
     }
-    tube(sh, 0.018);
+    tube(sh, 0.011);
     // sill line between the wheels
+    const R = S.r + 0.075;
     const sl = [];
-    for (let z = S.wr + R + 0.06; z <= S.wf - R - 0.06; z += 0.1) sl.push([side * (B.hw(z) * 0.985 + B.flare(z) * 0.85 + 0.014), B.bot(z) + 0.13, z]);
-    tube(sl, 0.014);
-    // arch rings
-    for (const wz of [S.wf, S.wr]) {
-      const ring = add(new THREE.TorusGeometry(S.r + 0.12, 0.013, 4, 24, Math.PI), M.neon);
-      ring.rotation.y = Math.PI / 2;
-      ring.position.set(side * (B.hw(wz) + B.flare(wz) * 0.9 + 0.02), S.r, wz);
-    }
+    for (let z = S.wr + R + 0.06; z <= S.wf - R - 0.06; z += 0.1) sl.push([side * (B.hw(z) * 0.985 + B.flare(z) * 0.85 + 0.012), B.bot(z) + 0.13, z]);
+    tube(sl, 0.01);
   }
   // canopy spine
   const C = S.cabin, sp = [];
   for (let z = C.zD - 0.1; z <= C.zA + 0.1; z += 0.08) sp.push([0, B.glassTop(z) + 0.012, z]);
-  tube(sp, 0.013);
-  // full-width light bars: white across the nose, red across the tail (+ thin colour line above it)
+  tube(sp, 0.009);
+  // full-width LED bars: white across the nose, red across the tail
   const fz = nose - 0.1;
-  const front = add(new THREE.BoxGeometry(B.hw(fz) * 1.75, 0.026, 0.035), M.head);
+  const front = add(new THREE.BoxGeometry(B.hw(fz) * 1.75, 0.022, 0.03), M.head);
   front.position.set(0, B.top(fz) - 0.07, fz + 0.01);
   const rz = tail + 0.05;
-  const rear = add(new THREE.BoxGeometry(B.hw(rz) * 1.85, 0.04, 0.035), M.tail);
+  const rear = add(new THREE.BoxGeometry(B.hw(rz) * 1.85, 0.035, 0.03), M.tail);
   rear.position.set(0, B.top(rz) - 0.08, rz - 0.01);
-  const rear2 = add(new THREE.BoxGeometry(B.hw(rz) * 1.7, 0.012, 0.03), M.neon);
-  rear2.position.set(0, B.top(rz) - 0.025, rz - 0.01);
+}
+
+/** z on the nose (fromNose) or tail where the body is at least |x| wide. */
+function edgeZ(B, x, fromNose) {
+  if (fromNose) { for (let z = B.nose; z > 0; z -= 0.01) if (B.hw(z) + B.flare(z) * 0.5 >= Math.abs(x) + 0.02) return z; }
+  else { for (let z = B.tail; z < 0; z += 0.01) if (B.hw(z) + B.flare(z) * 0.5 >= Math.abs(x) + 0.02) return z; }
+  return 0;
+}
+
+let honeyTex = null;
+function honeycomb() {
+  if (honeyTex) return honeyTex;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#16181e'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#020203';
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    const cx = x * 16 + (y % 2) * 8 + 4, cy = y * 16 + 8;
+    g.beginPath();
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + Math.PI / 6; g.lineTo(cx + Math.cos(a) * 6.2, cy + Math.sin(a) * 6.2); }
+    g.fill();
+  }
+  honeyTex = new THREE.CanvasTexture(c);
+  honeyTex.wrapS = honeyTex.wrapT = THREE.RepeatWrapping;
+  honeyTex.colorSpace = THREE.SRGBColorSpace;
+  return honeyTex;
+}
+
+/** v5.6 "real car" details: headlight units with projector lenses, smoked tail-light clusters, honeycomb
+ * grille and side intakes, door shut lines, door handles and a simple interior seen through the glass. */
+export function realParts({ S, B, M, add, ghost, nose, tail }) {
+  if (ghost) return;
+  const half = S.W / 2;
+  // existing car materials are reused wherever possible: after welding (CarMerge) every material is one draw call
+  const lens = M.glass, proj = M.head, handle = M.chrome, cabinMat = M.dark, seatMat = M.dark, gap = M.dark;
+  const smoke = new THREE.MeshPhysicalMaterial({ color: 0x3a0308, emissive: 0x70040e, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 });
+  const grilleMat = new THREE.MeshStandardMaterial({ map: honeycomb(), metalness: 0.4, roughness: 0.5 });
+  grilleMat.map.repeat.set(6, 1.4);
+
+  for (const side of [-1, 1]) {
+    // ---- headlight unit: a glossy black lens with two projector lamps, set into the nose
+    const x0 = side * half * 0.52, x1 = side * half * 0.84;
+    const z0 = edgeZ(B, x0, true), z1 = edgeZ(B, x1, true);
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2 - 0.035;
+    const yH = B.top(cz) - 0.085;
+    const unit = add(new THREE.BoxGeometry(Math.abs(x1 - x0) + 0.06, 0.085, 0.05), lens);
+    unit.position.set(cx, yH, cz);
+    unit.rotation.y = -Math.atan2(z1 - z0, Math.abs(x1 - x0)) * side;
+    for (const t of [0.3, 0.68]) {
+      const px = x0 + (x1 - x0) * t, pz = z0 + (z1 - z0) * t;
+      const p = add(new THREE.CircleGeometry(0.026, 14), proj);
+      p.position.set(px, yH - 0.004, pz - 0.006);
+    }
+    // ---- tail-light cluster: smoked red glass under the light bar
+    const tx0 = side * half * 0.5, tx1 = side * half * 0.86;
+    const tz0 = edgeZ(B, tx0, false), tz1 = edgeZ(B, tx1, false);
+    const tl = add(new THREE.BoxGeometry(Math.abs(tx1 - tx0) + 0.04, 0.1, 0.04), smoke);
+    tl.position.set((tx0 + tx1) / 2, B.top((tz0 + tz1) / 2) - 0.13, (tz0 + tz1) / 2 + 0.02);
+    tl.rotation.y = Math.atan2(tz1 - tz0, Math.abs(tx1 - tx0)) * side;
+    // ---- side intake in the front bumper
+    const iz = nose - 0.3, ix = side * half * 0.68;
+    const intake = add(new THREE.BoxGeometry(half * 0.42, 0.11, 0.06), grilleMat);
+    intake.position.set(ix, B.bot(iz) + 0.12, edgeZ(B, ix, true) - 0.05);
+    // ---- door: shut lines (front + rear edge) and a handle
+    const C = S.cabin;
+    const dz0 = C.zA - 0.08, dz1 = Math.max(C.zC + 0.05, S.wr + S.r + 0.3);
+    for (const z of [dz0, dz1]) {
+      const pts = [];
+      const yb = B.bot(z) + 0.16, yt = B.top(z) - 0.03;
+      for (let k = 0; k <= 6; k++) {
+        const y = yb + (yt - yb) * (k / 6);
+        pts.push(new THREE.Vector3(side * (B.hw(z) + B.flare(z) * 0.9 + 0.004 - (k === 6 ? 0.03 : 0)), y, z));
+      }
+      add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.0055, 4, false), gap);
+    }
+    const hz = dz0 - 0.28, hy = B.top(hz) - 0.13;
+    const h = add(new THREE.BoxGeometry(0.03, 0.025, 0.17), handle);
+    h.position.set(side * (B.hw(hz) + B.flare(hz) * 0.9 + 0.012), hy, hz);
+    // ---- seats seen through the glass
+    const sz = (C.zB + C.zC) / 2 - 0.05, sx = side * half * 0.36;
+    const seat = add(new THREE.BoxGeometry(0.42, 0.12, 0.46), seatMat);
+    seat.position.set(sx, B.top(sz) - 0.2, sz);
+    const back = add(new THREE.BoxGeometry(0.42, 0.5, 0.1), seatMat);
+    back.position.set(sx, B.top(sz) + 0.05, sz - 0.24);
+    back.rotation.x = -0.25;
+    const rest = add(new THREE.BoxGeometry(0.24, 0.16, 0.08), seatMat);
+    rest.position.set(sx, B.top(sz) + 0.36, sz - 0.32);
+  }
+  // ---- grille: honeycomb mesh between the headlights
+  const gz = nose - 0.06;
+  const grille = add(new THREE.BoxGeometry(half * 0.9, 0.13, 0.03), grilleMat);
+  grille.position.set(0, B.bot(gz) + 0.15, edgeZ(B, half * 0.45, true) - 0.04);
+  // ---- dashboard + steering wheel
+  const C = S.cabin;
+  const dz = C.zA - 0.12;
+  const dash = add(new THREE.BoxGeometry(S.W * 0.78, 0.12, 0.3), cabinMat);
+  dash.position.set(0, B.top(dz) - 0.04, dz - 0.05);
+  const wheel = add(new THREE.TorusGeometry(0.16, 0.022, 6, 18), cabinMat);
+  wheel.position.set(-half * 0.36, B.top(dz) + 0.08, dz - 0.26);
+  wheel.rotation.x = -0.5;
 }

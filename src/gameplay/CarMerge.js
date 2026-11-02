@@ -20,7 +20,7 @@ export function mergeStaticParts(group, keep = new Set()) {
   for (const o of group.children) {
     if (!o.isMesh || keep.has(o) || !o.visible || o.isSkinnedMesh || o.isInstancedMesh) continue;
     const m = o.material;
-    if (!m || Array.isArray(m) || m.blending === THREE.AdditiveBlending || o.geometry.groups?.length) continue;
+    if (!m || Array.isArray(m) || m.blending === THREE.AdditiveBlending) continue; // v5.6: boxes (with draw groups) weld too
     const key = signature(o);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
@@ -30,6 +30,7 @@ export function mergeStaticParts(group, keep = new Set()) {
     const geos = list.map((o) => {
       o.updateMatrix();
       const c = o.geometry.clone();
+      c.clearGroups(); // one material per mesh: the groups (e.g. the 6 faces of a box) are not needed
       for (const k of Object.keys(c.morphAttributes)) delete c.morphAttributes[k];
       c.applyMatrix4(o.matrix);
       return c;

@@ -426,14 +426,14 @@ function materials(colorHex, ghost, kit) {
   }
   const paintColor = accent.clone();
   const hsl = {}; paintColor.getHSL(hsl);
-  paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.55, hsl.l * 0.8));
+  paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.42, hsl.l * 0.7)); // v5.6: deep, rich paint
   const paint = new THREE.MeshPhysicalMaterial({
-    color: paintColor, metalness: 0.65, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.07,
-    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.12, 0.12), vertexColors: true, envMapIntensity: 1.25,
+    color: paintColor, metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.035,
+    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.08, 0.08), vertexColors: true, envMapIntensity: 1.3,
   });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x070a12, metalness: 0.2, roughness: 0.08, envMapIntensity: 2.4, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
-    transparent: true, opacity: 0.92,
+    transparent: true, opacity: 0.9, // v5.6: tinted, the seats and dashboard show through faintly
   });
   const dark = new THREE.MeshStandardMaterial({ color: 0x0b0b10, metalness: 0.3, roughness: 0.6 });
   const carbonM = new THREE.MeshPhysicalMaterial({ map: carbon(), metalness: 0.4, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.1 });
@@ -464,7 +464,13 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
-  const add = (g, m, parent = body) => { const mesh = new THREE.Mesh(g, m); parent.add(mesh); return mesh; };
+  const add = (g, m, parent = body) => {
+    // the paint uses vertex colours (baked shading on the body); plain parts get white ones, or they rendered black
+    if (m === M.paint && !g.attributes.color) g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3));
+    const mesh = new THREE.Mesh(g, m);
+    parent.add(mesh);
+    return mesh;
+  };
 
   add(geo.body, M.paint);
   add(geo.glass, M.glass);
@@ -475,9 +481,7 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
 
   const nose = B.nose, tail = B.tail;
   const half = S.W / 2;
-  // Grille + splitter
-  const grille = add(new THREE.BoxGeometry(half * 1.05, 0.16, 0.08), M.dark);
-  grille.position.set(0, B.bot(nose) + 0.14, nose - 0.08);
+  // Splitter (v5.6: the honeycomb grille and intakes come from CarKits.realParts)
   const splitter = add(new THREE.BoxGeometry(half * 1.7, 0.025, 0.22), M.carbon);
   splitter.position.set(0, B.bot(nose) - 0.01, nose - 0.12);
   // Side skirts
@@ -570,7 +574,7 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
     for (const side of [-1, 1]) {
       const z = -0.35;
       const intake = add(new THREE.SphereGeometry(0.3, 16, 10), M.dark);
-      intake.scale.set(0.25, 0.45, 1.3);
+      intake.scale.set(0.16, 0.3, 1.05); // v5.6: slimmer side intake
       intake.position.set(side * (B.hw(z) + B.flare(z) * 0.6 + 0.0), (B.bot(z) + B.top(z)) / 2, z);
     }
   }
@@ -605,10 +609,10 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
     rim.position.x = side * (S.tireW / 2 - 0.07);
     if (side < 0) { rim.rotation.y = Math.PI; rim.position.x = side * (S.tireW / 2 - 0.07); }
     spin.add(rim);
-    const cap = new THREE.Mesh(W.cap, M.neon);
+    const cap = new THREE.Mesh(W.cap, M.rim); // v5.6: real centre cap and polished rim lip instead of glowing rings
     cap.position.x = side * (S.tireW / 2 - 0.03);
     spin.add(cap);
-    const ring = new THREE.Mesh(W.ring, M.neon);
+    const ring = new THREE.Mesh(W.ring, M.chrome);
     ring.position.x = side * (S.tireW / 2 - 0.035);
     spin.add(ring);
     pivot.add(spin);

@@ -28,7 +28,7 @@ function poolTexture() {
 function poolColor(hex) {
   const c = new THREE.Color(hex);
   const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-  return c.multiplyScalar(0.8 * (1 - 0.5 * lum));
+  return c.multiplyScalar(0.3 * (1 - 0.5 * lum)); // v5.6: a soft hint of colour, the car itself is the star
 }
 
 /** Showroom scene: turntables with the players' selected cars. */
@@ -50,16 +50,19 @@ export class Garage {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide }));
       m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m);
     };
-    addPanel(0xffffff, 3, 16, 2, 0, 9, 0);
-    addPanel(0xff7a1a, 3, 3, 14, -10, 2, 2);
-    addPanel(0x00e5ff, 3, 3, 14, 10, 2, -2);
-    addPanel(0x0a7cff, 1.0, 20, 2, 0, 1, -10);
+    // v5.6 studio light: big white softboxes for clean reflections on the paint, coloured strips only as accents
+    addPanel(0xffffff, 2.6, 16, 3, 0, 9, 0);
+    addPanel(0xffffff, 1.4, 4, 10, 9, 3, 6);
+    addPanel(0xffffff, 1.0, 4, 10, -9, 3, -6);
+    addPanel(0xff7a1a, 1.1, 2, 14, -10, 2, 2);
+    addPanel(0x00e5ff, 1.1, 2, 14, 10, 2, -2);
+    addPanel(0x0a7cff, 0.5, 20, 2, 0, 1, -10);
     this.envMap = pm.fromScene(env, 0.03).texture;
     pm.dispose();
     this.scene.environment = this.envMap;
 
-    this.scene.add(new THREE.HemisphereLight(0x7cc8e0, 0x041420, 1.2));
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    this.scene.add(new THREE.HemisphereLight(0x7cc8e0, 0x041420, 0.7));
+    const key = new THREE.DirectionalLight(0xffffff, 1.7);
     key.position.set(5, 10, 6);
     this.scene.add(key);
 
@@ -88,9 +91,9 @@ export class Garage {
     this.players = players;
     for (let p = 0; p < players; p++) {
       const plat = new THREE.Group();
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.6, 0.25, 48), new THREE.MeshStandardMaterial({ color: 0x081018, metalness: 0.8, roughness: 0.3 }));
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.6, 0.25, 48), new THREE.MeshStandardMaterial({ color: 0x0a0f15, metalness: 0.4, roughness: 0.5 }));
       disc.position.y = 0.12;
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(CAR_COLORS[garage[p].color].hex).multiplyScalar(2.5) }));
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(CAR_COLORS[garage[p].color].hex).multiplyScalar(1.4) }));
       ring.rotation.x = Math.PI / 2;
       ring.position.y = 0.26;
       // podium lit in the car's colour: a soft light pool on the disc (no lamp: its highlight sparkled on the paint)
@@ -129,7 +132,7 @@ export class Garage {
     m.root.position.y = 0.25;
     if (m.shadow) m.shadow.visible = false;
     this.platforms[p].plat.add(m.root);
-    this.platforms[p].ring.material.color.setHex(color).multiplyScalar(2.5);
+    this.platforms[p].ring.material.color.setHex(color).multiplyScalar(1.4);
     const glow = GLOWS[g.glow ?? 0];
     this.platforms[p].pool.material.color.copy(poolColor(glow?.hex ?? color));
     this.platforms[p].rainbow = !!glow?.rainbow;
