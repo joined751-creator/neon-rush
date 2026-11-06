@@ -89,12 +89,62 @@ class EngineVoice {
   }
 }
 
+/**
+ * v5.7 rival engines: the three nearest bots get a lighter engine voice each, placed left / right of the player
+ * and with a (gently exaggerated) Doppler shift — a rival coming up behind is heard before it is seen,
+ * and a car being passed "whooshes" by.
+ */
+class RivalVoice {
+  constructor() {
+    const ctx = A.ctx;
+    this.o1 = ctx.createOscillator(); this.o1.type = 'triangle';
+    this.o2 = ctx.createOscillator(); this.o2.type = 'sine';
+    this.f = ctx.createBiquadFilter(); this.f.type = 'lowpass'; this.f.Q.value = 0.4; this.f.frequency.value = 600;
+    this.g = ctx.createGain(); this.g.gain.value = 0;
+    this.p = ctx.createStereoPanner();
+    const g2 = ctx.createGain(); g2.gain.value = 0.6;
+    this.o1.connect(this.f); this.o2.connect(g2).connect(this.f);
+    this.f.connect(this.g).connect(this.p).connect(A.engine);
+    this.o1.start(); this.o2.start();
+    this.car = null;
+  }
+
+  update(car, L) {
+    const t = A.ctx.currentTime;
+    if (!car || !L) { this.g.gain.setTargetAtTime(0, t, 0.15); this.car = null; return; }
+    const dx = car.x - L.x, dz = car.z - L.z, d = Math.hypot(dx, dz) || 1;
+    // left / right of the listener's car (screen right = (-cos h, sin h))
+    const pan = Math.max(-0.9, Math.min(0.9, (dx * -Math.cos(L.heading) + dz * Math.sin(L.heading)) / d));
+    // Doppler: closing speed along the line between the cars (arcade-exaggerated)
+    const closing = ((car.vx - L.vx) * -dx + (car.vz - L.vz) * -dz) / d;
+    const dop = 1 + Math.max(-0.28, Math.min(0.28, closing / 110));
+    const sr = Math.max(0, Math.min(1.2, Math.abs(car.speed) / (car.topSpeed || 80)));
+    const base = (car.type?.ev ? 110 + sr * 260 : 64 + sr * 150) * dop;
+    const k = this.car === car ? 0.06 : 0.01;
+    this.o1.frequency.setTargetAtTime(base, t, k);
+    this.o2.frequency.setTargetAtTime(base * 0.5, t, k);
+    this.f.frequency.setTargetAtTime(400 + sr * 900, t, 0.1);
+    this.p.pan.setTargetAtTime(pan, t, 0.05);
+    const vol = car.eliminated ? 0 : 0.2 / (1 + d / 9);
+    this.g.gain.setTargetAtTime(vol, t, 0.08);
+    this.car = car;
+  }
+
+  dispose() {
+    const t = A.ctx.currentTime;
+    this.g.gain.setTargetAtTime(0, t, 0.05);
+    setTimeout(() => { try { this.o1.stop(); this.o2.stop(); } catch { /* */ } this.p.disconnect(); }, 300);
+  }
+}
+
 /** Wires EventBus → sounds. Only cars driven by humans make "close" sounds; others are attenuated. */
 export class AudioBridge {
   constructor(gameState) {
     this.state = gameState;
     this.music = new Music();
     this.engines = new Map();
+    this.rivals = [];
+    this.cars = [];
     this.listeners = []; // array of human cars (for panning/distance)
     A.muted = gameState.settings.muted;
 
@@ -162,13 +212,48 @@ export class AudioBridge {
   setListeners(cars) {
     for (const e of this.engines.values()) e.dispose();
     this.engines.clear();
+    for (const r of this.rivals) r.dispose();
+    this.rivals = [];
     this.listeners = cars;
     if (!A.ready) return;
     for (const car of cars) this.engines.set(car, new EngineVoice(cars.length > 1 ? (car.player === 0 ? -0.6 : 0.6) : 0));
+    if (cars.length) for (let i = 0; i < 3; i++) this.rivals.push(new RivalVoice());
   }
+
+  /** v5.7: every car of the race (for the rival engine voices). */
+  setCars(cars) { this.cars = cars || []; }
 
   update() {
     if (!A.ready) return;
     for (const [car, e] of this.engines) e.update(car);
+    if (!this.rivals.length) return;
+    // the three nearest rivals to any player, each heard relative to its nearest player
+    const near = [];
+    for (const c of this.cars) {
+      if (c.human || c.eliminated) continue;
+      let best = null, bd = 70 * 70;
+      for (const h of this.listeners) {
+        const d = (c.x - h.x) ** 2 + (c.z - h.z) ** 2;
+        if (d < bd) { bd = d; best = h; }
+      }
+      if (best) near.push({ c, h: best, d: bd });
+    }
+    near.sort((a, b) => a.d - b.d);
+    // keep a rival on the voice it already had (no pitch jumps when the order changes)
+    const free = [...this.rivals];
+    const assigned = new Map();
+    for (const n of near.slice(0, 3)) {
+      const v = free.find((r) => r.car === n.c);
+      if (v) { assigned.set(v, n); free.splice(free.indexOf(v), 1); }
+    }
+    for (const n of near.slice(0, 3)) {
+      if ([...assigned.values()].includes(n)) continue;
+      const v = free.shift();
+      if (v) assigned.set(v, n);
+    }
+    for (const r of this.rivals) {
+      const n = assigned.get(r);
+      r.update(n?.c, n?.h);
+    }
   }
 }

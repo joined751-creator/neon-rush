@@ -19,6 +19,8 @@ import { OverdriveFX } from '../gameplay/Overdrive.js';
 import { setupLegend } from '../gameplay/Legend.js';
 import { ChaseUI } from '../ui/ChaseUI.js';
 import { CarsUI } from '../ui/CarsUI.js';
+import { FeelFX } from '../gameplay/FeelFX.js';
+import { PolishUI } from '../ui/PolishUI.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
 export class Game {
@@ -36,6 +38,8 @@ export class Game {
     this.odfx = new OverdriveFX();
     this.chaseUI = new ChaseUI(this);
     this.carsUI = new CarsUI(this);
+    this.feel = new FeelFX(this); // v5.7: style combo, slingshot, impact punch
+    this.polish = new PolishUI(this); // v5.7: screen transitions, race title card, results count-up
     this.garage = null;
     this.race = null;
     this.state = 'menu'; // menu | garage | race | paused | results
@@ -84,6 +88,7 @@ export class Game {
     });
     this.progress.beginRace(this.race);
     this.odfx.attach(this.race);
+    this.feel.attach(this.race);
     this.state = 'menu';
     this.hud.hide();
     this.audio.setListeners([]);
@@ -134,8 +139,10 @@ export class Game {
     this.odfx.attach(this.race);
     warmupShaders(this.race, this.render.renderer);
     this.hud.setup(this.race, this.gs.settings);
+    this.feel.attach(this.race);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
+    this.audio.setCars(this.race.cars);
     eventBus.emit(Events.MUSIC_RACE);
     this.state = 'race';
     document.getElementById('pause-btn').hidden = false;
@@ -145,7 +152,7 @@ export class Game {
     if (this.mobile.enabled && this.gs.settings.steering === 'tilt') this.mobile.requestTilt().then(() => this.mobile.calibrateTilt());
     this.perf = { acc: 0, frames: 0, good: 0 };
     this.updateRotate();
-    this.flash();
+    this.polish.raceCard(this.race);
   }
 
   pause() {
@@ -230,13 +237,6 @@ export class Game {
     }
   }
 
-  flash() {
-    const f = document.getElementById('flash');
-    f.style.transition = 'none';
-    f.style.opacity = '0.6';
-    requestAnimationFrame(() => { f.style.transition = 'opacity 0.6s'; f.style.opacity = '0'; });
-  }
-
   // ---------------------------------------------------------------- mobile shell
   setupMobileShell() {
     const fs = document.getElementById('fs-btn');
@@ -313,7 +313,7 @@ export class Game {
     else if (this.state === 'paused' && this.input.pausePressed()) this.resume();
 
     if (this.state === 'garage') this.garage.update(dt);
-    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); }
+    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); this.feel.update(dt); }
     if (this.state === 'race') this.mobile.update(this.race);
     this.render.setSpeedFX(this.state === 'race' || this.state === 'results' ? this.race.fxStrength : [0, 0]);
 
