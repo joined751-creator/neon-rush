@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryGrid';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">Новое в 5.6</span><span class="nb-t">Настоящие машины<small>Глубокая краска твоего цвета, фары с линзами, хромированные диски, салон и студийный свет в гараже</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">Новое в 5.7</span><span class="nb-t">Как в больших играх<small>Комбо стиля с множителем, рывок из-за спины, объёмный звук соперников и кинематографичный старт</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {
