@@ -50,8 +50,21 @@ export const sfx = {
   goBeep: () => { [784, 1175, 1568].forEach((f, i) => tone(f, i ? 'sine' : 'triangle', 0.7, i ? 0.1 : 0.22, { filter: 5000 })); tone(392, 'sine', 0.6, 0.2, { to: 784 }); },
   boost: (pan = 0) => { noise(0.6, 0.35, { lp: 800, sweep: 6000, pan }); tone(220, 'sawtooth', 0.5, 0.12, { to: 880, filter: 2500, pan }); },
   driftLevel: (lvl, pan = 0) => tone([0, 660, 880, 1175][lvl] || 880, 'triangle', 0.16, 0.14, { filter: 4000, pan }),
-  wall: (amt = 1, pan = 0) => { noise(0.18, Math.min(0.5, 0.15 + amt * 0.02), { lp: 1800, pan }); tone(70, 'square', 0.15, 0.2, { to: 40, filter: 600, pan }); },
-  bump: (pan = 0) => { noise(0.12, 0.2, { lp: 900, pan }); tone(100, 'sine', 0.1, 0.18, { to: 60, pan }); },
+  // v5.7 heavier impacts: a deep body thump + a short crunch on top of the scrape
+  wall: (amt = 1, pan = 0) => {
+    const k = Math.min(1, amt / 14);
+    noise(0.18, Math.min(0.5, 0.15 + amt * 0.02), { lp: 1800, pan });
+    tone(70, 'square', 0.15, 0.2, { to: 40, filter: 600, pan });
+    tone(58, 'sine', 0.32, 0.25 + k * 0.3, { to: 26, pan });
+    if (k > 0.4) noise(0.12, 0.18 * k, { hp: 900, lp: 5000, delay: 0.015, pan });
+  },
+  bump: (pan = 0) => { noise(0.12, 0.2, { lp: 900, pan }); tone(100, 'sine', 0.1, 0.18, { to: 60, pan }); tone(52, 'sine', 0.22, 0.22, { to: 30, pan }); },
+  // v5.7 style combo: a rising chime per link, a bright chord when banked, a falling buzz when lost
+  comboTick: (mult = 2) => { const f = 440 * Math.pow(2, Math.min(12, (mult - 1) * 2) / 12); tone(f, 'triangle', 0.12, 0.12, { filter: 5000 }); tone(f * 2, 'sine', 0.1, 0.04, { delay: 0.02 }); },
+  comboBank: (mult = 1) => { [523, 659, 784, 1047].slice(0, 2 + Math.min(2, Math.floor(mult / 3))).forEach((f, i) => { tone(f, 'triangle', 0.4, 0.12, { delay: i * 0.05, filter: 6000 }); tone(f * 2, 'sine', 0.3, 0.035, { delay: i * 0.05 + 0.02 }); }); },
+  comboLost: () => { tone(330, 'triangle', 0.35, 0.12, { to: 110, filter: 2000 }); noise(0.2, 0.08, { lp: 900 }); },
+  // slingshot out of a slipstream: an air rush that opens up + a rising tone
+  slingshot: () => { noise(0.55, 0.3, { lp: 500, sweep: 7000 }); tone(180, 'sine', 0.5, 0.16, { to: 720 }); },
   pickup: (pan = 0) => [523, 659, 784, 1047].forEach((f, i) => tone(f, 'triangle', 0.1, 0.13, { delay: i * 0.045, filter: 5000, pan })),
   rocket: (pan = 0) => noise(0.7, 0.3, { lp: 300, sweep: 3000, pan }),
   explosion: (pan = 0) => { noise(0.9, 0.55, { lp: 2500, sweep: 120, pan }); tone(80, 'sine', 0.6, 0.4, { to: 30, pan }); },
