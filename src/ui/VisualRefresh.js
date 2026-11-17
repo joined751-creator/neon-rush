@@ -65,7 +65,7 @@ body.night-shift { --glass:rgba(5,15,24,.88); --muted:#a7bfcb; --line:rgba(155,2
 /* Touch HUD has independent lanes: map left, timing right, goals at top centre, thumbs below. */
 .night-shift .rc-short { display:none; }
 body.touch-ui.night-shift .phud .race-contracts {
-  top:92px!important; bottom:auto!important; right:auto!important; left:50%!important;
+  top:max(8px, env(safe-area-inset-top))!important; bottom:auto!important; right:auto!important; left:50%!important;
   transform:translateX(-50%); width:250px!important; padding:8px!important;
   box-sizing:border-box; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px 10px;
   border:1px solid #8ce8ff30; border-radius:9px; background:#04121bdd;
@@ -78,16 +78,24 @@ body.touch-ui.night-shift .phud:not(.compact) .h-tr { min-width:0; width:160px; 
 body.touch-ui.night-shift .phud .h-tr .tm-main { font-size:10px; }
 body.touch-ui.night-shift .phud .h-tr .tm-main b { font-size:24px; }
 body.touch-ui.night-shift .phud .h-tr .tm-row { font-size:9px; }
-body.touch-ui.night-shift .phud.compact .race-contracts { top:126px!important; width:190px!important; }
-body.touch-ui.night-shift.portrait .phud .race-contracts { top:188px!important; width:230px!important; }
+body.touch-ui.night-shift .phud.compact .race-contracts { top:max(8px, env(safe-area-inset-top))!important; width:190px!important; }
+body.touch-ui.night-shift.portrait .phud .race-contracts { top:max(8px, env(safe-area-inset-top))!important; width:230px!important; }
 @media(max-width:600px) and (orientation:landscape) {
- body.touch-ui.night-shift .phud .race-contracts { top:64px!important; width:176px!important; }
+ body.touch-ui.night-shift .phud .race-contracts { top:max(8px, env(safe-area-inset-top))!important; width:176px!important; }
  body.touch-ui.night-shift .phud:not(.compact) .h-tr { width:120px; }
  body.touch-ui.night-shift .phud .h-tr .tm-row { display:none; }
  body.touch-ui.night-shift .phud .race-contracts .rc-goal { font-size:7px; }
 }
 body.touch-ui.night-shift.portrait .phud .h-banner { top:270px; }
 body.touch-ui.night-shift.portrait .phud .h-feed { top:310px; }
+/* No mobile footer: the landscape hint and its dark plate cover menu actions. */
+body.touch-ui.night-shift #screen-title .title-bar { display:none; }
+body.touch-ui.night-shift #screen-title { padding-bottom:max(16px, env(safe-area-inset-bottom)); }
+/* Reserve the top centre for contracts; transient combo feedback goes below it. */
+body.touch-ui.night-shift .phud .fx-combo { top:calc(max(8px, env(safe-area-inset-top)) + 66px); }
+body.touch-ui.night-shift:not(.portrait) .phud .h-banner { top:140px; }
+body.touch-ui.night-shift.portrait .phud .h-tl { top:80px; }
+body.touch-ui.night-shift.portrait .phud .h-tr { top:150px; }
 /* Short menus scroll inside the visible viewport; keep actions reachable below the cards. */
 body.night-shift #screen-setup { align-items:flex-start; }
 body.night-shift #screen-setup .setup-panel { margin-block:auto; flex-shrink:0; }
