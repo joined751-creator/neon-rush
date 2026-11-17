@@ -878,3 +878,30 @@ body.touch-ui.portrait #minimap:not(.split-v):not(.split-h) { top: auto; bottom:
 /* readability of the title copy over the live 3D background (phones, portrait) */
 .tagline { text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 18px rgba(5,2,14,0.85); }
 body.portrait #screen-title::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,4,15,0.2) 0%, rgba(7,4,15,0.78) 38%, rgba(7,4,15,0.86) 100%); pointer-events: none; z-index: -1; }
+
+/* Neon Contracts: live skill goals and post-race telemetry. */
+.race-contracts { position:absolute; right:18px; top:184px; width:218px; padding:14px; border:1px solid #5df9c531; border-left:2px solid #60ffbd; border-radius:4px 14px 14px 4px; background:linear-gradient(130deg,#071822e8,#09121baf); color:#eafcff; pointer-events:none; backdrop-filter:blur(10px); font-family:var(--f-mono); }
+.rc-kicker { display:flex; justify-content:space-between; font-size:10px; letter-spacing:.18em; color:#60ffbd; margin-bottom:12px; }
+.rc-goal { display:grid; grid-template-columns:1fr auto; gap:6px; margin:10px 0; font-size:10px; }
+.rc-goal b { color:#a0b5c2; font-variant-numeric:tabular-nums; }
+.rc-goal i { grid-column:1/-1; height:3px; background:#ffffff18; overflow:hidden; border-radius:4px; }
+.rc-goal u { display:block; height:100%; background:#00e5ff; transform-origin:left; transition:transform .12s linear; }
+.rc-goal.done span,.rc-goal.done b { color:#60ffbd; }
+.rc-goal.done u { background:#60ffbd; }
+.race-contracts>small { display:block; font-size:8px; color:#9db2c1; margin-top:12px; line-height:1.5; }
+.contract-report { padding:20px; margin-top:16px; border:1px solid #60ffbd35; border-radius:16px; background:radial-gradient(ellipse at top right,#00e5ff15,transparent 65%),#07121c; }
+.cr-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.cr-heading span { font:700 9px var(--f-mono); letter-spacing:.2em; color:#60ffbd; }
+.cr-heading h3 { margin:8px 0; font:700 clamp(14px,2vw,20px) var(--f-display); color:#f2fdff; }
+.cr-rank { font:900 48px var(--f-display); line-height:1; color:#9eb8ca; }
+.cr-rank.rank-S { color:#ffe178; text-shadow:0 0 28px #ffd40066; }
+.cr-rank.rank-A { color:#60ffbd; }.cr-rank.rank-B { color:#00e5ff; }
+.cr-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:18px 0; }
+.cr-stats>div { border-left:2px solid #00e5ff40; padding-left:10px; }
+.cr-stats b { display:block; font:700 22px var(--f-mono); color:#fff; }
+.cr-stats small { font-size:10px; color:#8faabb; }.cr-stats span { display:block; margin-top:5px; font-size:10px; color:#8faabb; }
+.cr-goals { display:flex; flex-wrap:wrap; gap:8px; }.cr-goals span { font-size:10px; padding:6px 9px; background:#ffffff06; color:#92a8b7; border:1px solid #ffffff12; border-radius:20px; }.cr-goals .done { color:#60ffbd; border-color:#60ffbd40; background:#60ffbd0d; }
+.compact .race-contracts { top:158px; right:10px; width:178px; padding:8px; }
+.compact .rc-goal { font-size:8px; margin:6px 0; }.compact .rc-kicker { font-size:8px; margin-bottom:6px; }
+@media(max-height:550px),(max-width:700px) { .race-contracts { top:auto!important; bottom:auto; right:10px; left:auto; top:158px!important; width:164px; padding:8px; } .rc-goal { font-size:8px; margin:6px 0; } .race-contracts>small { display:none; } .sz-tiny .race-contracts { top:92px!important; width:150px; padding:6px; } .sz-tiny .rc-goal { margin:4px 0; font-size:7px; } .sz-tiny .rc-kicker { margin-bottom:3px; font-size:7px; } .cr-stats { grid-template-columns:repeat(2,1fr); } }
+@media(prefers-reduced-motion:reduce) { .rc-goal u { transition:none; } }
