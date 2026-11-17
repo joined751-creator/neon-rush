@@ -6,7 +6,8 @@
   "description": "NEON RUSH — 3D arcade neon racing game for desktop and mobile browsers (Three.js, PWA)",
   "scripts": {
     "build": "bun build.mjs",
-    "bench": "node tools/race-bench.mjs"
+    "bench": "node tools/race-bench.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

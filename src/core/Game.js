@@ -20,6 +20,7 @@ import { setupLegend } from '../gameplay/Legend.js';
 import { ChaseUI } from '../ui/ChaseUI.js';
 import { CarsUI } from '../ui/CarsUI.js';
 import { FeelFX } from '../gameplay/FeelFX.js';
+import { ContractsUI } from '../ui/ContractsUI.js';
 import { PolishUI } from '../ui/PolishUI.js';
 
 /** Orchestrator: owns systems, game flow (title → setup → garage → race → results) and the loop. */
@@ -39,6 +40,7 @@ export class Game {
     this.chaseUI = new ChaseUI(this);
     this.carsUI = new CarsUI(this);
     this.feel = new FeelFX(this); // v5.7: style combo, slingshot, impact punch
+    this.contracts = new ContractsUI(this);
     this.polish = new PolishUI(this); // v5.7: screen transitions, race title card, results count-up
     this.garage = null;
     this.race = null;
@@ -73,6 +75,7 @@ export class Game {
 
   // ---------------------------------------------------------------- flow
   disposeRace() {
+    this.contracts.detach();
     if (this.race) { this.race.dispose(); this.race = null; }
   }
 
@@ -140,6 +143,7 @@ export class Game {
     warmupShaders(this.race, this.render.renderer);
     this.hud.setup(this.race, this.gs.settings);
     this.feel.attach(this.race);
+    this.contracts.attach(this.race);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
     this.audio.setCars(this.race.cars);
@@ -198,6 +202,7 @@ export class Game {
     const reward = this.progress.finishRace(res);
     this.menus.showResults(res, this.race.humans.length, gpInfo);
     this.progressUI.showRewards(reward);
+    this.contracts.finish();
   }
 
   nextRound() {
@@ -313,7 +318,7 @@ export class Game {
     else if (this.state === 'paused' && this.input.pausePressed()) this.resume();
 
     if (this.state === 'garage') this.garage.update(dt);
-    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); this.feel.update(dt); }
+    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); this.feel.update(dt); this.contracts.update(dt); }
     if (this.state === 'race') this.mobile.update(this.race);
     this.render.setSpeedFX(this.state === 'race' || this.state === 'results' ? this.race.fxStrength : [0, 0]);
 
