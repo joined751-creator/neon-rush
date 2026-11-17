@@ -1,3 +1,4 @@
+import { viewportSize } from '../systems/Viewport.js';
 import { installVisualRefresh } from '../ui/VisualRefresh.js';
 import { PulseFX } from '../gameplay/PulseFX.js';
 import * as THREE from 'three';
@@ -287,7 +288,8 @@ export class Game {
 
   /** Portrait phone during a race → overlay asking to rotate; the race waits underneath. */
   updateRotate() {
-    const portrait = window.innerHeight > window.innerWidth * 1.05;
+    const { W, H } = viewportSize();
+    const portrait = H > W * 1.05;
     this.rotateBlock = this.mobile.enabled && portrait && !this.portraitOk && this.state === 'race';
     document.getElementById('rotate').hidden = !this.rotateBlock;
     document.body.classList.toggle('portrait', portrait);
@@ -298,11 +300,11 @@ export class Game {
     if (this.state !== 'race' || this.gs.settings.quality === 'low') return;
     const pf = this.perf;
     pf.acc += dt; pf.frames++;
-    if (pf.acc < 2) return;
+    if (pf.acc < 4) return;
     const fps = pf.frames / pf.acc;
     pf.acc = 0; pf.frames = 0;
     const sc = this.render.scale ?? 1;
-    if (fps < 50 && sc > 0.55) { this.render.setScale(sc - (fps < 40 ? 0.15 : 0.1)); pf.good = 0; }
+    if (fps < 40 && sc > 0.85) { this.render.setScale(sc - 0.05); pf.good = 0; }
     else if (fps > 57) { pf.good++; if (pf.good >= 3 && sc < 1) { this.render.setScale(sc + 0.1); pf.good = 0; } }
     else pf.good = 0;
   }

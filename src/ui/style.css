@@ -43,7 +43,7 @@ body { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -w
 #game-canvas, #touch, #hud { touch-action: none; }
 .screen { touch-action: pan-y; }
 body { color: var(--text); font-family: var(--f-body); font-size: 15px; -webkit-font-smoothing: antialiased; user-select: none; }
-#app { position: fixed; inset: 0; overflow: hidden; }
+#app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; }
 #game-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 button { font: inherit; color: inherit; }
 kbd {

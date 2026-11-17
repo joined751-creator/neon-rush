@@ -1,3 +1,4 @@
+import { viewportSize } from '../systems/Viewport.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { ELIMINATION, CAR } from '../core/Constants.js';
 import { ITEM_ICONS, ITEM_NAMES, ITEM_COLORS, UI_ICONS } from './Icons.js';
@@ -148,7 +149,7 @@ export class HUD {
   /** Size classes per pane (split panes and phones get denser layouts). */
   layout() {
     if (!this.race || !this.panes.length) return;
-    const W = window.innerWidth, H = window.innerHeight;
+    const { W, H } = viewportSize();
     const n = this.panes.length;
     const touch = document.body.classList.contains('touch-ui');
     for (const pane of this.panes) {

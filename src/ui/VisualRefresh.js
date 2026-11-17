@@ -61,6 +61,37 @@ body.night-shift { --glass:rgba(5,15,24,.88); --muted:#a7bfcb; --line:rgba(155,2
 @media(min-width:1100px) and (min-height:760px) { .night-shift .title-col { margin-left:2vw; } }
 @media(max-width:720px) { .night-shift #screen-title { padding-top:22px; padding-bottom:66px; } .night-shift .title-col { gap:11px; } .night-shift .logo-a { font-size:60px; } .night-shift .logo-b { font-size:76px; } .night-shift #title-menu .mbtn { min-height:58px; font-size:13px; } .night-shift .panel { border-radius:12px; } .night-shift .card .card-t { font-size:11px; } }
 @media(max-height:600px) { .night-shift #screen-title { align-items:flex-start; padding-top:18px; } .night-shift .title-col { gap:8px; } .night-shift .logo-a { font-size:42px; } .night-shift .logo-b { font-size:52px; } .night-shift .logo-rule { margin-top:6px; } .night-shift #title-menu .mbtn { min-height:46px; padding:8px 14px; font-size:12px; } .night-shift #title-menu .mbtn small { display:none; } .night-shift .new-banner { padding:6px 10px; } .night-shift .eyebrow-line { font-size:8px; } }
+
+/* Touch HUD has independent lanes: map left, timing right, goals at top centre, thumbs below. */
+.night-shift .rc-short { display:none; }
+body.touch-ui.night-shift .phud .race-contracts {
+  top:92px!important; bottom:auto!important; right:auto!important; left:50%!important;
+  transform:translateX(-50%); width:250px!important; padding:8px!important;
+  box-sizing:border-box; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px 10px;
+  border:1px solid #8ce8ff30; border-radius:9px; background:#04121bdd;
+}
+body.touch-ui.night-shift .race-contracts .rc-kicker { grid-column:1/-1; margin:0 0 3px; font-size:8px; letter-spacing:.12em; }
+body.touch-ui.night-shift .race-contracts .rc-full, body.touch-ui.night-shift .race-contracts>small { display:none; }
+body.touch-ui.night-shift .race-contracts .rc-short { display:inline; }
+body.touch-ui.night-shift .race-contracts .rc-goal { display:grid; margin:0; gap:4px; font-size:8px; }
+body.touch-ui.night-shift .phud:not(.compact) .h-tr { min-width:0; width:160px; padding:8px 12px; box-sizing:border-box; }
+body.touch-ui.night-shift .phud .h-tr .tm-main { font-size:10px; }
+body.touch-ui.night-shift .phud .h-tr .tm-main b { font-size:24px; }
+body.touch-ui.night-shift .phud .h-tr .tm-row { font-size:9px; }
+body.touch-ui.night-shift .phud.compact .race-contracts { top:126px!important; width:190px!important; }
+body.touch-ui.night-shift.portrait .phud .race-contracts { top:188px!important; width:230px!important; }
+@media(max-width:600px) and (orientation:landscape) {
+ body.touch-ui.night-shift .phud .race-contracts { top:64px!important; width:176px!important; }
+ body.touch-ui.night-shift .phud:not(.compact) .h-tr { width:120px; }
+ body.touch-ui.night-shift .phud .h-tr .tm-row { display:none; }
+ body.touch-ui.night-shift .phud .race-contracts .rc-goal { font-size:7px; }
+}
+body.touch-ui.night-shift.portrait .phud .h-banner { top:270px; }
+body.touch-ui.night-shift.portrait .phud .h-feed { top:310px; }
+/* Short menus scroll inside the visible viewport; keep actions reachable below the cards. */
+body.night-shift #screen-setup { align-items:flex-start; }
+body.night-shift #screen-setup .setup-panel { margin-block:auto; flex-shrink:0; }
+@media(min-width:900px) { body.night-shift .cards.tracks { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 @media(prefers-reduced-motion:reduce) { .night-shift *, .night-shift *::before, .night-shift *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 `;
 export function installVisualRefresh() {

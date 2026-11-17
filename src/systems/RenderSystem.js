@@ -1,3 +1,4 @@
+import { viewportSize, fitAppViewport, renderPixelRatio } from './Viewport.js';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -5,7 +6,6 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { GAME } from '../core/Constants.js';
 import { CinematicPass } from './CinematicPass.js';
 
 /** Speed FX: radial blur + chromatic aberration per viewport (strength 0..1). */
@@ -145,6 +145,7 @@ export class RenderSystem {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
+    this.app = document.getElementById('app');
     this.renderer.domElement.id = 'game-canvas';
     document.getElementById('app').prepend(this.renderer.domElement);
     this.views = [];
@@ -168,11 +169,15 @@ export class RenderSystem {
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);
     this.composer.addPass(new OutputPass());
-    // FXAA: cheap edge smoothing for phones, where MSAA is too expensive
+    // FXAA also covers shader/neon edges and the low-quality rendering path.
     this.fxaa = new ShaderPass(FXAAShader);
-    this.fxaa.enabled = false;
+    this.fxaa.enabled = true;
     this.composer.addPass(this.fxaa);
     window.addEventListener('resize', () => this.resize());
+    window.visualViewport?.addEventListener('resize', () => this.resize());
+    window.visualViewport?.addEventListener('scroll', () => this.resize());
+    document.addEventListener('fullscreenchange', () => this.resize());
+    document.addEventListener('webkitfullscreenchange', () => this.resize());
     this.resize();
   }
 
@@ -223,19 +228,21 @@ export class RenderSystem {
   setQuality(q) {
     this.quality = q;
     this.scale = 1;
-    // MSAA is expensive on phone GPUs: 4x on desktop "high", 2x on desktop "medium", off on touch devices and "low"
+    // Two MSAA samples on touch devices, four on desktop high; FXAA also smooths shader/neon edges.
     const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
-    const samples = touch || q === 'low' ? 0 : q === 'high' ? 4 : 2;
+    const requestedSamples = q === 'low' ? 0 : q === 'high' && !touch ? 4 : 2;
+    const samples = Math.min(requestedSamples, this.renderer.capabilities.maxSamples ?? requestedSamples);
     for (const t of [this.composer.renderTarget1, this.composer.renderTarget2]) {
       if (t.samples !== samples) { t.samples = samples; t.dispose(); }
     }
-    this.fxaa.enabled = samples === 0 && q !== 'low';
+    this.fxaa.enabled = true;
+    this.bloom.enabled = this.cine.enabled = this.speedPass.enabled = q !== 'low';
     this.resize();
   }
 
-  /** Dynamic resolution (0.5..1) — lowered automatically when FPS drops on phones. */
+  /** Dynamic resolution (0.85..1) — lowered automatically when FPS drops on phones. */
   setScale(s) {
-    const v = Math.max(0.75, Math.min(1, s));
+    const v = Math.max(0.85, Math.min(1, s));
     if (Math.abs(v - (this.scale ?? 1)) < 0.01) return;
     this.scale = v;
     this.resize();
@@ -246,13 +253,13 @@ export class RenderSystem {
     this.views = views;
     views.forEach((v, i) => { if (i < 2) this.speedPass.uniforms.uRect.value[i].set(v.x, v.y, v.w, v.h); });
     if (views.length < 2) this.speedPass.uniforms.uRect.value[1].set(0, 0, 0, 0);
-    this.cine.setViews(views, window.innerWidth, window.innerHeight);
+    this.cine.setViews(views, this.size.W, this.size.H);
     this.setSpeedFX([0, 0]);
     this.updateAspects();
   }
 
   updateAspects() {
-    const W = window.innerWidth, H = window.innerHeight;
+    const { W, H } = viewportSize();
     for (const v of this.views) {
       v.camera.aspect = (v.w * W) / Math.max(1, v.h * H);
       v.camera.updateProjectionMatrix();
@@ -260,11 +267,12 @@ export class RenderSystem {
   }
 
   resize() {
-    const W = window.innerWidth, H = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1,
-      this.quality === 'high' ? GAME.MAX_DPR_HIGH : this.quality === 'medium' ? GAME.MAX_DPR_MED : GAME.MAX_DPR_LOW) * (this.scale ?? 1);
+    const { W, H } = viewportSize();
+    const dpr = renderPixelRatio(window.devicePixelRatio, this.quality, this.scale ?? 1);
+    fitAppViewport(this.app, viewportSize());
     this.dpr = dpr;
     this.size = { W, H };
+    this.layoutDirty = true;
     this.renderer.setPixelRatio(dpr);
     // v4.4.2: the canvas keeps its CSS size (100% of the screen). Phones sometimes report the old (portrait) size
     // during a rotation / fullscreen switch; with a fixed pixel size the picture then filled only part of the screen
@@ -280,9 +288,12 @@ export class RenderSystem {
 
   /** v4.4.2: called every frame — re-fits the canvas when the window size changed without a (timely) resize event. */
   checkSize() {
-    const W = window.innerWidth, H = window.innerHeight;
-    if (W > 0 && H > 0 && (W !== this.size?.W || H !== this.size?.H)) { this.resize(); return true; }
-    return false;
+    const { W, H, x, y } = viewportSize();
+    if (x !== this.viewportX || y !== this.viewportY) { fitAppViewport(this.app, { W, H, x, y }); this.viewportX = x; this.viewportY = y; }
+    if (W > 0 && H > 0 && (W !== this.size?.W || H !== this.size?.H)) this.resize();
+    const dirty = !!this.layoutDirty;
+    this.layoutDirty = false;
+    return dirty;
   }
 
   setSpeedFX(str) {
@@ -292,31 +303,16 @@ export class RenderSystem {
 
   viewportHeightPx() {
     const v = this.views[0];
-    return (v ? v.h : 1) * window.innerHeight * this.dpr;
+    return (v ? v.h : 1) * this.size.H * this.dpr;
   }
 
   render() {
     this.renderer.shadowMap.needsUpdate = true;
     if (this.scene === this.mainScene) this.preRender?.(); // v4.2: live car reflections are filmed only for drawn frames
-    if (this.quality === 'low') {
-      const r = this.renderer;
-      const W = window.innerWidth, H = window.innerHeight;
-      r.setRenderTarget(null);
-      r.setScissorTest(false);
-      r.clear();
-      for (const v of this.views) {
-        r.setViewport(v.x * W, v.y * H, v.w * W, v.h * H);
-        r.setScissor(v.x * W, v.y * H, v.w * W, v.h * H);
-        r.setScissorTest(true);
-        r.render(this.scene, v.camera);
-      }
-      r.setScissorTest(false);
-      r.setViewport(0, 0, W, H);
-    } else {
-      this.speedPass.uniforms.uTime.value = (performance.now() / 1000) % 1000;
-      this.speedPass.uniforms.uAspect.value = window.innerWidth / Math.max(1, window.innerHeight);
-      this.updateLights();
-      this.composer.render();
-    }
+    // All qualities use the same full-frame output, including low-quality FXAA.
+    this.speedPass.uniforms.uTime.value = (performance.now() / 1000) % 1000;
+    this.speedPass.uniforms.uAspect.value = this.size.W / Math.max(1, this.size.H);
+    if (this.cine.enabled) this.updateLights();
+    this.composer.render();
   }
 }
