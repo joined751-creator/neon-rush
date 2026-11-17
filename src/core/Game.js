@@ -1,3 +1,5 @@
+import { installVisualRefresh } from '../ui/VisualRefresh.js';
+import { PulseFX } from '../gameplay/PulseFX.js';
 import * as THREE from 'three';
 import { warmupShaders } from '../gameplay/Warmup.js';
 import { GAME, GP } from './Constants.js';
@@ -41,6 +43,8 @@ export class Game {
     this.carsUI = new CarsUI(this);
     this.feel = new FeelFX(this); // v5.7: style combo, slingshot, impact punch
     this.contracts = new ContractsUI(this);
+    this.pulse = new PulseFX();
+    installVisualRefresh();
     this.polish = new PolishUI(this); // v5.7: screen transitions, race title card, results count-up
     this.garage = null;
     this.race = null;
@@ -76,6 +80,7 @@ export class Game {
   // ---------------------------------------------------------------- flow
   disposeRace() {
     this.contracts.detach();
+    this.pulse.detach();
     if (this.race) { this.race.dispose(); this.race = null; }
   }
 
@@ -144,6 +149,7 @@ export class Game {
     this.hud.setup(this.race, this.gs.settings);
     this.feel.attach(this.race);
     this.contracts.attach(this.race);
+    this.pulse.attach(this.race);
     this.menus.hideAll();
     this.audio.setListeners(this.race.humans);
     this.audio.setCars(this.race.cars);
@@ -318,7 +324,7 @@ export class Game {
     else if (this.state === 'paused' && this.input.pausePressed()) this.resume();
 
     if (this.state === 'garage') this.garage.update(dt);
-    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); this.feel.update(dt); this.contracts.update(dt); }
+    else if (this.race && this.state !== 'paused' && !this.rotateBlock) { this.race.update(dt); this.odfx.update(dt); this.feel.update(dt); this.contracts.update(dt); this.pulse.update(dt); }
     if (this.state === 'race') this.mobile.update(this.race);
     this.render.setSpeedFX(this.state === 'race' || this.state === 'results' ? this.race.fxStrength : [0, 0]);
 
