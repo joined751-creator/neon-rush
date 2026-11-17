@@ -25,7 +25,8 @@ export class ContractsUI {
       const run = new ContractRun();
       const el = document.createElement('div');
       el.className = 'race-contracts';
-      el.innerHTML = `<span class="rc-kicker">КОНТРАКТЫ <b>0/3</b></span>${run.goals.map((g) => `<div class="rc-goal" title="${g.hint}"><span>${g.name}</span><b>0/${g.target} с</b><i><u></u></i></div>`).join('')}<small>${race.mode === 'trial' ? 'Заезд на время · без награды нитро' : 'Каждый контракт: +15 нитро'}</small>`;
+      el.setAttribute('aria-label', 'Контракты заезда');
+      el.innerHTML = `<span class="rc-kicker">КОНТРАКТЫ <b>0/3</b></span>${run.goals.map((g) => `<div class="rc-goal" title="${g.hint}"><span class="rc-full">${g.name}</span><span class="rc-short">${({clean: 'Линия', drift: 'Дрифт', boost: 'Форсаж'})[g.id]}</span><b>0/${g.target} с</b><i><u></u></i></div>`).join('')}<small>${race.mode === 'trial' ? 'Заезд на время · без награды нитро' : 'Каждый контракт: +15 нитро'}</small>`;
       panes[i]?.append(el);
       return { car, run, el, rows: [...el.querySelectorAll('.rc-goal')], count: el.querySelector('.rc-kicker b') };
     });
