@@ -1,4 +1,3 @@
-import { createPaintFinish } from './PaintFinish.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { radialTexture, labelTexture } from '../level/Textures.js';
@@ -207,7 +206,7 @@ function tube(points, radius, seg = 24) {
 }
 
 // ----------------------------------------------------------------------------------- textures
-let flakeTex = null, treadTex = null, carbonTex = null, glowTex = null, shadowTex = null, finishTex = null;
+let flakeTex = null, treadTex = null, carbonTex = null, glowTex = null, shadowTex = null;
 function flakeNormal() {
   if (flakeTex) return flakeTex;
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -429,9 +428,8 @@ function materials(colorHex, ghost, kit) {
   const hsl = {}; paintColor.getHSL(hsl);
   paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.48, hsl.l * 0.83)); // v5.6: deep, rich paint
   const paint = new THREE.MeshPhysicalMaterial({
-    roughnessMap: finishTex ||= createPaintFinish(),
     color: paintColor, metalness: 0.42, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.12,
-    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.045, 0.045), vertexColors: true, envMapIntensity: 1.3,
+    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.02, 0.02), vertexColors: true, envMapIntensity: 1.3,
   });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x070a12, metalness: 0.2, roughness: 0.14, envMapIntensity: 1.55, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
@@ -730,7 +728,7 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
 }
 
 export function disposeCarModel(model) {
-  const shared = new Set([flakeTex, treadTex, carbonTex, glowTex, shadowTex, finishTex]);
+  const shared = new Set([flakeTex, treadTex, carbonTex, glowTex, shadowTex]);
   model.root.traverse((o) => {
     if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
     if (o.material) {

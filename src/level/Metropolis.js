@@ -4,7 +4,7 @@ import { rng, hashStr } from './WorldKit.js';
 /** Seeded architectural composition, with clearance against the ENTIRE circuit. */
 export function metropolisLayout(track, quality = 'medium') {
   const random = rng(hashStr(`${track.def.id}:architecture`));
-  const budget = quality === 'low' ? 12 : quality === 'high' ? 56 : 32;
+  const budget = quality === 'low' ? 8 : quality === 'high' ? 32 : 20;
   const result = [];
   for (let attempt = 0; attempt < budget * 12 && result.length < budget; attempt++) {
     const s = random() * track.length;
@@ -25,14 +25,14 @@ export function metropolisLayout(track, quality = 'medium') {
   return result;
 }
 
-/** Small facade texture: dark mullions, lit offices, warm/cool window variation. */
+/** Broad facade light panels instead of dense tiny windows that shimmer in motion. */
 export function facadeTexture() {
   const width = 64, height = 128, pixels = new Uint8Array(width * height * 4);
   const random = rng(6084);
-  const cells = Array.from({length:128}, () => ({ on:random() > 0.35, warm:random() > 0.7, dim:0.3 + random() * 0.65 }));
+  const cells = Array.from({length:16}, () => ({ on:random() > 0.35, warm:random() > 0.7, dim:0.3 + random() * 0.65 }));
   for (let y=0;y<height;y++) for(let x=0;x<width;x++) {
-    const cell=cells[Math.floor(y/8)*8+Math.floor(x/8)];
-    const lit=x%8>=2 && x%8<=5 && y%8>=2 && y%8<=5 && cell.on;
+    const cell=cells[Math.floor(y/16)*2+Math.floor(x/32)];
+    const lit=x%32>=5 && x%32<=26 && y%16>=4 && y%16<=11 && cell.on;
     const k=lit ? cell.dim : 0;
     const i=(y*width+x)*4;
     pixels[i]=Math.round((cell.warm?255:135)*k);
@@ -60,7 +60,7 @@ export function buildMetropolis(track, theme, quality) {
   const geometry=new THREE.BoxGeometry(1,1,1);
   // Roof/underside UVs point to a dark mullion, instead of drawing windows on the roof.
   for(let i=0;i<geometry.attributes.normal.count;i++) if(Math.abs(geometry.attributes.normal.getY(i))>0.5) geometry.attributes.uv.setXY(i,0,0);
-  const buildings=new THREE.InstancedMesh(geometry,new THREE.MeshStandardMaterial({color:0x132535,metalness:0.38,roughness:0.38,emissive:0xffffff,emissiveMap:facade,emissiveIntensity:0.65}),layout.length);
+  const buildings=new THREE.InstancedMesh(geometry,new THREE.MeshStandardMaterial({color:0x132535,metalness:0.38,roughness:0.38,emissive:0xffffff,emissiveMap:facade,emissiveIntensity:0.32}),layout.length);
   const add=(list,b,x,y,z,w,h,d,color=null)=> {
     transform.position.set(b.x+Math.cos(b.yaw)*x+Math.sin(b.yaw)*z,b.y+y,b.z-Math.sin(b.yaw)*x+Math.cos(b.yaw)*z);
     transform.rotation.set(0,b.yaw,0);transform.scale.set(w,h,d);transform.updateMatrix();
@@ -72,7 +72,7 @@ export function buildMetropolis(track, theme, quality) {
     add(solid,b,0,b.h+1,0,b.w+0.7,2,b.d+0.7);
     const color=b.style===1?accent:primary;
     // Architectural light blades on opposite corners, with clear dark facade between them.
-    for(const side of [-1,1]) add(luminous,b,side*(b.w/2+0.05),b.h/2,side*(b.d/2+0.05),0.09,b.h,0.09,color);
+    for(const side of [-1,1]) add(luminous,b,side*(b.w/2+0.05),b.h/2,side*(b.d/2+0.05),0.24,b.h,0.24,color);
     if(b.style===0) {
       add(solid,b,0,b.h+5,0,b.w*0.55,8,b.d*0.55);
       add(luminous,b,0,b.h+9.1,0,b.w*0.55+0.1,0.12,b.d*0.55+0.1,color);

@@ -16,7 +16,7 @@ const SpeedShader = {
     uRect: { value: [new THREE.Vector4(0, 0, 1, 1), new THREE.Vector4(0, 0, 0, 0)] },
     uStr: { value: [0, 0] },
     uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 },
-    uGrain: { value: 0.025 }, uTime: { value: 0 }, uCA: { value: 0.0022 }, uRain: { value: 0 }, uAspect: { value: 1.78 },
+    uGrain: { value: 0 }, uTime: { value: 0 }, uCA: { value: 0.0005 }, uRain: { value: 0 }, uAspect: { value: 1.78 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
@@ -47,8 +47,7 @@ const SpeedShader = {
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSat);
       c = c * uGain + uLift * (1.0 - smoothstep(0.0, 0.6, l));
-      float n = fract(sin(dot(uv * 1000.0 + uTime * 13.7, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-      c += n * uGrain * (0.25 + l);
+      // No animated film grain: stable colour keeps the moving image clean.
       return max(c, vec3(0.0));
     }
     void main(){
@@ -69,15 +68,15 @@ const SpeedShader = {
         b = mix(b, b * b * (3.0 - 2.0 * min(b, 1.0)), 0.12);
         gl_FragColor = vec4(grade(b, uv) * vig * (1.0 + 0.12 * drop), 1.0); return;
       }
-      float amt = s * smoothstep(0.15, 0.75, l) * 0.045;
+      float amt = s * smoothstep(0.15, 0.75, l) * 0.015;
       vec3 col = vec3(0.0);
       for (int k = 0; k < 8; k++) {
         float t = float(k) / 7.0;
         vec2 o = d * amt * t;
         vec2 lo = r.xy + 0.001, hi = r.xy + r.zw - 0.001;
-        col.r += texture2D(tDiffuse, clamp(uv - o * 1.15, lo, hi)).r;
+        col.r += texture2D(tDiffuse, clamp(uv - o * 1.02, lo, hi)).r;
         col.g += texture2D(tDiffuse, clamp(uv - o, lo, hi)).g;
-        col.b += texture2D(tDiffuse, clamp(uv - o * 0.85, lo, hi)).b;
+        col.b += texture2D(tDiffuse, clamp(uv - o * 0.98, lo, hi)).b;
       }
       col /= 8.0;
       col = mix(col, col * col * (3.0 - 2.0 * min(col, 1.0)), 0.12);
