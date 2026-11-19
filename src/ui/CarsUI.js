@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryVisual';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">METROPOLIS 6.0</span><span class="nb-t">Новый масштаб неонового мира<small>Многоуровневая архитектура, светящиеся фасады и новые материалы</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">CLEAN 6.0.1</span><span class="nb-t">Чистая картинка в движении<small>Меньше ряби и размытия, крупные формы окружения</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {
