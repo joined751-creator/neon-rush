@@ -17,9 +17,9 @@ test('all tracks and mirror directions have repeatable architecture clear of the
  }
 });
 test('architecture is three bounded instanced draws and can be disposed repeatedly',()=>{
- const tr=new Track(TRACKS[0]);
+ const tr=new Track(TRACKS.find(t=>t.theme==='city'));
  for(const quality of ['low','medium','high']) {
-  const g=buildMetropolis(tr,THEMES.sunset,quality);
+  const g=buildMetropolis(tr,THEMES.city,quality);
   assert.equal(g.children.length,3);
   let disposed=0;g.children[0].material.emissiveMap.addEventListener('dispose',()=>disposed++);
   for(const m of g.children){assert.ok(m.isInstancedMesh);assert.ok(m.count<=300);assert.ok([...m.instanceMatrix.array].every(Number.isFinite));assert.ok(Number.isFinite(m.boundingSphere.radius));assert.equal(m.castShadow,false);}
@@ -33,5 +33,13 @@ test('procedural materials contain opaque pixels and mipmaps for distance filter
   const data=texture.image.data;
   for(let i=3;i<data.length;i+=4)assert.equal(data[i],255);
   texture.dispose();
+ }
+});
+
+test('city buildings are never constructed on non-city themes',()=>{
+ for(const def of TRACKS) {
+  const g=buildMetropolis(new Track(def),THEMES[def.theme],'high');
+  if(def.theme!=='city')assert.equal(g.children.length,0);
+  disposeTree(g);
  }
 });

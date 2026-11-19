@@ -50,6 +50,7 @@ export function facadeTexture() {
 /** Three instanced draws: facades, plinths/crowns and restrained illuminated trim. */
 export function buildMetropolis(track, theme, quality) {
   const group=new THREE.Group(); group.name='metropolis';
+  if (theme.props !== 'city') return group;
   const layout=metropolisLayout(track,quality);
   if (!layout.length) return group;
   const transform=new THREE.Object3D();

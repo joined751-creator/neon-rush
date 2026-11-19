@@ -35,40 +35,8 @@ THEMES.grid = {
   strips: ['СЕКТОР 7', 'ЯДРО', 'СЕТЬ'],
 };
 
-// v5.2: every world becomes digital — black ground with a light grid, wire-frame mountains and data towers,
-// glossy light-edged road and light ribbons — while each track keeps its own sky and its own two colours
-const DIGITAL = {
-  digital: 1, ribbons: true, props: 'grid', mountains: 'grid', stars: false, carLights: 0.85,
-  hemiGround: 0x010406, barrierMetal: 0x0a1118,
-};
-const WORLDS = {
-  sunset: { c1: 0xff2bd6, c2: 0xffb000, sky: [0x05010d, 0x1a0630, 0xff3d7f], fog: 0x0a0212, ground: 0x050108, hemi: 0x4a1c5a, dir: 0x6a3a6a, asphalt: 0x07050c,
-    fx: { streak: 0.2, streakCol: 0xff6ad8, god: 0.6, godCol: 0xffb070, godThr: 0.95, flare: 0.5, flareCol: 0xffc890, grade: { lift: [0.03, 0.0, 0.04], gain: [1.04, 0.98, 1.02], sat: 1.12 } } },
-  city: { c1: 0x00e5ff, c2: 0xff2bd6, sky: [0x010208, 0x060a1e, 0x1a2a6a], fog: 0x040612, ground: 0x010307, hemi: 0x1d3a70, dir: 0x3a5078, asphalt: 0x05070c, dense: true,
-    fx: { streak: 0.28, streakCol: 0x4fb8ff, god: 0.0, godCol: 0xa8c4ff, godThr: 0.85, flare: 0.0, flareCol: 0xb8ccff, grade: { lift: [0.0, 0.02, 0.045], gain: [1.0, 1.0, 1.06], sat: 1.12 } } },
-  arctic: { c1: 0x8fe8ff, c2: 0x8a6bff, sky: [0x010510, 0x041a2c, 0x0f5068], fog: 0x020c16, ground: 0x01050a, hemi: 0x2a5a70, dir: 0x6a8a9a, asphalt: 0x060a10,
-    fx: { streak: 0.24, streakCol: 0x9fe8ff, god: 0.2, godCol: 0xbfe8ff, godThr: 0.85, flare: 0.0, flareCol: 0xcfeaff, grade: { lift: [0.0, 0.015, 0.04], gain: [0.98, 1.0, 1.06], sat: 1.06 } } },
-  volcano: { c1: 0xff3a1a, c2: 0xffb000, sky: [0x060101, 0x1a0402, 0x8a2008], fog: 0x0c0302, ground: 0x060101, hemi: 0x5a2010, dir: 0x6a3020, asphalt: 0x0a0505,
-    fx: { streak: 0.2, streakCol: 0xff6a30, god: 0.6, godCol: 0xff8a40, godThr: 0.9, flare: 0.3, flareCol: 0xffa060, grade: { lift: [0.035, 0.005, 0.0], gain: [1.06, 0.98, 0.94], sat: 1.12 } } },
-  space: { c1: 0x9a6bff, c2: 0x39ff88, asphalt: 0x05040c, hemi: 0x3a2a70, dir: 0x5a4a90 },
-};
-for (const [key, w] of Object.entries(WORLDS)) {
-  const t = THEMES[key];
-  if (!t) continue;
-  Object.assign(t, DIGITAL, {
-    wall: w.c1, wall2: w.c2, grid: w.c1, roadLine: w.c1, kerbA: w.c2, kerbB: 0x04070b, lamp: w.c1,
-    asphalt: w.asphalt, hemiSky: new THREE.Color(w.hemi).lerp(new THREE.Color(0x9badc5), 0.18).getHex(), dirColor: w.dir, denseCity: !!w.dense,
-  });
-  if (w.sky) Object.assign(t, { skyTop: w.sky[0], skyMid: w.sky[1], skyHorizon: w.sky[2], fog: w.fog, ground: w.ground, cityGlow: w.c1 });
-  if (w.fx) t.fx = { ...w.fx, bloom: t.fx?.bloom };
-  if (key === 'arctic') { t.stars = true; t.frost = 0; } // frost would wash the glass road white
-  if (key === 'space') t.stars = true;
-}
-TRACK_ACCENT.sunset = { a: '#ff2bd6', b: '#ffb000', label: 'Закат' };
-TRACK_ACCENT.city = { a: '#00e5ff', b: '#ff2bd6', label: 'Город' };
-TRACK_ACCENT.arctic = { a: '#8fe8ff', b: '#8a6bff', label: 'Лёд' };
-TRACK_ACCENT.volcano = { a: '#ff3a1a', b: '#ffb000', label: 'Магма' };
-TRACK_ACCENT.space = { a: '#9a6bff', b: '#39ff88', label: 'Космос' };
+// Register the digital circuit only. Other tracks keep their own terrain,
+// weather, materials and sky from Constants instead of becoming copies of Grid.
 
 for (const t of TRACKS) t.isNew = false;
 if (!TRACKS.some((t) => t.id === 'grid')) {
