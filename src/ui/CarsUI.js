@@ -36,11 +36,11 @@ export class CarsUI {
     menus.renderGP = (p) => { renderGP(p); this.decorate(p); };
 
     eventBus.on(Events.UI_ACTION, ({ action }) => {
-      if (action !== 'tryGrid') return;
-      // v5.0: the banner opens the digital world — «Сетка» track + the «Вектор» light car
-      const i = CAR_TYPES.findIndex((t) => t.id === 'vector');
+      if (action !== 'tryVisual') return;
+      // Visual showcase: free Comet on the regraded city circuit.
+      const i = CAR_TYPES.findIndex((t) => t.id === 'comet');
       if (i >= 0) game.gs.garage[0].type = i;
-      const tr = TRACKS.findIndex((t) => t.id === 'grid');
+      const tr = TRACKS.findIndex((t) => t.id === 'city');
       if (tr >= 0) game.gs.settings.track = tr;
       if (game.gs.settings.mode === 'gp') game.gs.settings.mode = 'race';
       game.gs.saveSettings();
@@ -53,10 +53,10 @@ export class CarsUI {
   banner() {
     const b = document.querySelector('.new-banner');
     if (!b) return;
-    b.dataset.action = 'tryGrid';
+    b.dataset.action = 'tryVisual';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">NIGHT SHIFT</span><span class="nb-t">Новый облик ночных гонок<small>Световые импульсы, стеклянный кокпит и обновлённый гоночный интерфейс</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">VISUAL 5.10</span><span class="nb-t">Новый свет «Неон-Сити»<small>Мягкие блики кузова, мокрый асфальт и детали «Кометы»</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {

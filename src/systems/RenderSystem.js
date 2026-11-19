@@ -198,6 +198,10 @@ export class RenderSystem {
   applyLook(fx) {
     const u = this.speedPass.uniforms;
     const g = fx?.grade || {};
+    // Per-track highlight budget: bright cores stay sharp instead of washing out silhouettes.
+    this.bloom.strength = fx?.bloom?.strength ?? 0.7;
+    this.bloom.radius = fx?.bloom?.radius ?? 0.5;
+    this.bloom.threshold = fx?.bloom?.threshold ?? 0.78;
     u.uLift.value.fromArray(g.lift || [0, 0, 0]);
     u.uGain.value.fromArray(g.gain || [1, 1, 1]);
     u.uSat.value = g.sat ?? 1;
