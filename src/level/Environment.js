@@ -1,3 +1,4 @@
+import { buildTrackDetails } from './TrackDetails.js';
 import * as THREE from 'three';
 import { signAtlasTexture } from './Textures.js';
 import { eventBus, Events } from '../core/EventBus.js';
@@ -119,6 +120,7 @@ export class Environment {
     for (const o of this.dressing.objects) this.group.add(o);
     lap('dressing');
     if (theme.props === 'space') buildSpace(ctx); else if (theme.props === 'grid') buildGrid(ctx); else buildScenery(ctx);
+    this.group.add(buildTrackDetails(track, theme, qp.q));
     lap('scenery');
 
     const metal = batch.mesh('metal', new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.38, envMapIntensity: 1.1 }));
