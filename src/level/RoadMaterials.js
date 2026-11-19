@@ -122,11 +122,19 @@ const ROAD_MAIN = /* glsl */`
 
     // wet surface: darker, glossy, puddles nearly mirror-like
     if (uWet > 0.0) {
-      float puddle = smoothstep(0.64, 0.7, macro2) * (1.0 - kb) * (0.6 + 0.4 * laneWear);
+      // Broad irregular patches with broken edges; wheel paths stay less flooded.
+      float basin = macro2 * 0.7 + macro * 0.3;
+      float drainage = smoothstep(uHalf * 0.45, uHalf - 0.5, ax);
+      float puddle = smoothstep(0.53, 0.7, basin + drainage * 0.08)
+                   * (1.0 - kb) * (1.0 - clamp(tyre * 0.28, 0.0, 0.6));
       col *= mix(1.0, 0.6, uWet) * mix(1.0, 0.7, puddle * uWet);
-      rough = mix(rough, mix(0.34, 0.1, puddle), uWet * (1.0 - paint * 0.5));
+      rough = mix(rough, mix(0.46, 0.16, puddle), uWet * (1.0 - paint * 0.5));
       metal = uWet * 0.1 * (1.0 - paint);
       h *= 1.0 - puddle;
+      // Soft drainage seams near the barriers add scale without new geometry.
+      float gutter = rdBand(ax, uHalf - 0.22, uHalf - 0.06, fwx);
+      col *= 1.0 - gutter * 0.35;
+      rough = mix(rough, 0.55, gutter);
     }
 
     // light pools under the poles (left at k*D, right at (k+0.5)*D) — wet roads stretch them toward the viewer

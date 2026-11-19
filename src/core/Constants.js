@@ -220,9 +220,9 @@ export const THEMES = {
   city: {
     skyTop: 0x02030c, skyMid: 0x0d0a2a, skyHorizon: 0x3a1a6a, fog: 0x120a28,
     fogNear: 60, fogFar: 750, ground: 0x07060f, grid: 0x00e5ff, sun: false,
-    roadLine: 0x00e5ff, wall: 0xff00aa, wall2: 0x00e5ff, hemiSky: 0x5a7bff, hemiGround: 0x150a20, dirColor: 0x9fb8ff,
-    props: 'city', particles: 'rain', stars: false, exposure: 1.1, carLights: 1.0,
-    fx: { streak: 0.32, streakCol: 0x4f8dff, god: 0.3, godCol: 0xa8c4ff, godThr: 0.85, flare: 0.35, flareCol: 0xb8ccff, grade: { lift: [0.0, 0.025, 0.045], gain: [1.06, 0.97, 1.03], sat: 1.1 } },
+    roadLine: 0x00e5ff, wall: 0xff00aa, wall2: 0x00e5ff, hemiSky: 0x8aafd4, hemiGround: 0x171c29, dirColor: 0x9fb8ff,
+    props: 'city', particles: 'rain', stars: false, exposure: 1.04, carLights: 1.0,
+    fx: { bloom: { strength: 0.46, radius: 0.32, threshold: 1.0 }, streak: 0.18, streakCol: 0x4f8dff, god: 0.3, godCol: 0xa8c4ff, godThr: 0.85, flare: 0.2, flareCol: 0xb8ccff, grade: { lift: [0.006, 0.018, 0.028], gain: [1.01, 1.0, 1.02], sat: 1.02 } },
     asphalt: 0x15141c, lamp: 0x9fd4ff, kerbA: 0xff1a4a, kerbB: 0xe6e6f0, wet: 1, barrierMetal: 0x262634, moon: true, clouds: true, cityGlow: 0xff3d9a,
     signs: [
       { title: 'НЕОН', sub: 'ШИНЫ ДЛЯ МОКРОЙ НОЧИ', c1: '#00e5ff', c2: '#ff2bd6', icon: 'drop' },

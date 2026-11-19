@@ -426,13 +426,13 @@ function materials(colorHex, ghost, kit) {
   }
   const paintColor = accent.clone();
   const hsl = {}; paintColor.getHSL(hsl);
-  paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.42, hsl.l * 0.7)); // v5.6: deep, rich paint
+  paintColor.setHSL(hsl.h, Math.min(1, hsl.s * 0.95), Math.min(0.48, hsl.l * 0.83)); // v5.6: deep, rich paint
   const paint = new THREE.MeshPhysicalMaterial({
-    color: paintColor, metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.035,
-    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.08, 0.08), vertexColors: true, envMapIntensity: 1.3,
+    color: paintColor, metalness: 0.42, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.12,
+    normalMap: flakeNormal(), normalScale: new THREE.Vector2(0.045, 0.045), vertexColors: true, envMapIntensity: 1.3,
   });
   const glass = new THREE.MeshPhysicalMaterial({
-    color: 0x070a12, metalness: 0.2, roughness: 0.08, envMapIntensity: 2.4, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
+    color: 0x070a12, metalness: 0.2, roughness: 0.14, envMapIntensity: 1.55, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
     transparent: true, opacity: 0.9, // v5.6: tinted, the seats and dashboard show through faintly
   });
   const dark = new THREE.MeshStandardMaterial({ color: 0x0b0b10, metalness: 0.3, roughness: 0.6 });
@@ -583,6 +583,19 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
       const z = tail + 0.55 + k * 0.12;
       const v = add(new THREE.BoxGeometry(0.9, 0.02, 0.05), M.dark);
       v.position.set(0, B.top(z) + 0.04, z);
+    }
+  }
+  // Comet GT detail pass: integrated rear diffuser vanes and deck vents.
+  // Reuse existing materials so static batching can weld these into the body.
+  if (typeId === 'comet') {
+    for (const x of [-0.6, -0.3, 0, 0.3, 0.6]) {
+      const fin = add(new THREE.BoxGeometry(0.025, 0.13, 0.38), M.carbon);
+      fin.position.set(x, B.bot(tail + 0.18) + 0.025, tail + 0.13);
+    }
+    for (let i = 0; i < 4; i++) {
+      const z = tail + 0.3 + i * 0.075;
+      const vent = add(new THREE.BoxGeometry(0.75, 0.012, 0.027), M.dark);
+      vent.position.set(0, B.top(z) + 0.018, z);
     }
   }
   buildKitExtras({ kit, S, B, M, add, ghost, nose, tail });
