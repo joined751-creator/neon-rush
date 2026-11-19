@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryVisual';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">CLEAN 6.0.1</span><span class="nb-t">Чистая картинка в движении<small>Меньше ряби и размытия, крупные формы окружения</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">WORLDS 6.0.2</span><span class="nb-t">Каждая трасса — свой мир<small>Закат, ночной город, полярные льды, вулкан, космос и Сетка</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {
