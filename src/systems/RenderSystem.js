@@ -1,3 +1,4 @@
+import { visualLook } from './VisualLook.js';
 import { viewportSize, fitAppViewport, renderPixelRatio } from './Viewport.js';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -189,7 +190,7 @@ export class RenderSystem {
 
   /** v4.1: per-track cinematic look (theme.fx) and the world direction of the sun / moon / planet. */
   setLook(theme, lightDir) {
-    this.look = theme?.fx || null;
+    this.look = visualLook(theme?.fx);
     this.rain = theme?.wet ? 1 : 0; // v4.2: drops on the lens on the rainy track
     this.lightDir = lightDir ? lightDir.clone().normalize() : null;
     this.applyLook(this.scene === this.mainScene ? this.look : null);

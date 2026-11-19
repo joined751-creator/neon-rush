@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryVisual';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">VISUAL 5.11</span><span class="nb-t">Новая глубина трасс<small>Световые ориентиры, металлические стойки и секторные арки</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">VISUAL 5.12</span><span class="nb-t">Графический проход всей игры<small>Свет всех трасс, мягкие блики и детализация всех машин</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {

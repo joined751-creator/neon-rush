@@ -57,10 +57,10 @@ for (const [key, w] of Object.entries(WORLDS)) {
   if (!t) continue;
   Object.assign(t, DIGITAL, {
     wall: w.c1, wall2: w.c2, grid: w.c1, roadLine: w.c1, kerbA: w.c2, kerbB: 0x04070b, lamp: w.c1,
-    asphalt: w.asphalt, hemiSky: w.hemi, dirColor: w.dir, denseCity: !!w.dense,
+    asphalt: w.asphalt, hemiSky: new THREE.Color(w.hemi).lerp(new THREE.Color(0x9badc5), 0.18).getHex(), dirColor: w.dir, denseCity: !!w.dense,
   });
   if (w.sky) Object.assign(t, { skyTop: w.sky[0], skyMid: w.sky[1], skyHorizon: w.sky[2], fog: w.fog, ground: w.ground, cityGlow: w.c1 });
-  if (w.fx) t.fx = w.fx;
+  if (w.fx) t.fx = { ...w.fx, bloom: t.fx?.bloom };
   if (key === 'arctic') { t.stars = true; t.frost = 0; } // frost would wash the glass road white
   if (key === 'space') t.stars = true;
 }

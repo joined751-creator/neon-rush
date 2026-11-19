@@ -598,6 +598,17 @@ export function buildCarModel(typeId, colorHex, { label = null, ghost = false, t
       vent.position.set(0, B.top(z) + 0.018, z);
     }
   }
+  // All body styles receive inset sill trim, sized to the wheelbase.
+  // Buran gets a protective step; EVs keep their closed, vent-free bodywork.
+  const sillLength = Math.max(0.4, S.wf - S.wr - S.r * 2.2);
+  const sillZ = (S.wf + S.wr) * 0.5;
+  for (const side of [-1, 1]) {
+    const x = side * (B.hw(sillZ) + 0.025);
+    const sill = add(new THREE.BoxGeometry(0.09, typeId === 'buran' ? 0.12 : 0.065, sillLength), M.carbon);
+    sill.position.set(x, B.bot(sillZ) + 0.055, sillZ);
+    const trim = add(new THREE.BoxGeometry(0.012, 0.012, sillLength * 0.85), M.chrome);
+    trim.position.set(x + side * 0.05, B.bot(sillZ) + 0.09, sillZ);
+  }
   buildKitExtras({ kit, S, B, M, add, ghost, nose, tail });
   // Rear licence plate (blank)
   const plate = add(new THREE.PlaneGeometry(0.46, 0.11), new THREE.MeshStandardMaterial({ color: 0xe8e8ee, roughness: 0.5 }));
