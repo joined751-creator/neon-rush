@@ -56,7 +56,7 @@ export class CarsUI {
     b.dataset.action = 'tryVisual';
     b.classList.remove('ch-banner');
     b.classList.add('cu-banner');
-    b.innerHTML = '<span class="nb-tag">VISUAL 5.12</span><span class="nb-t">Графический проход всей игры<small>Свет всех трасс, мягкие блики и детализация всех машин</small></span><i class="mbtn-go"></i>';
+    b.innerHTML = '<span class="nb-tag">METROPOLIS 6.0</span><span class="nb-t">Новый масштаб неонового мира<small>Многоуровневая архитектура, светящиеся фасады и новые материалы</small></span><i class="mbtn-go"></i>';
   }
 
   decorate(p) {
